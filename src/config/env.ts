@@ -21,6 +21,9 @@ const schema = z.object({
     .refine((v) => !v.startsWith('replace-')),
   WHATSAPP_PHONE_NUMBER_ID: z.string().default(''),
   WORKER_POLL_INTERVAL_MS: z.coerce.number().int().min(1000).default(30000),
+  // Remote activation awaits a replacement consent notice and M1-05 spending controls.
+  MODEL_MODE: z.enum(['disabled', 'fixture']).default('disabled'),
+  MODEL_TIMEOUT_MS: z.coerce.number().int().min(100).max(120000).default(20000),
 });
 
 export type Config = z.infer<typeof schema>;

@@ -67,9 +67,11 @@ Invoke-RestMethod http://localhost:3000/health/live
 Invoke-RestMethod http://localhost:3000/health/ready
 ```
 
-Run the health commands in a third terminal if the worker occupies the second. Live returns 200 if the API runs. Ready returns 200 only if the ingress and outbox tables can be queried. The worker handles local onboarding, logs `modelEnabled: false`, and leaves normal requests pending for the future model consumer. Onboarding responses are stored locally, not sent on WhatsApp. Try `npm run onboarding:chat`; see [onboarding](onboarding.md).
+Run the health commands in a third terminal if the worker occupies the second. Live returns 200 if the API runs. Ready returns 200 only if the ingress and outbox tables can be queried. The worker handles local onboarding, logs `remoteModelEnabled: false`, and defaults to leaving ready requests pending. `MODEL_MODE=fixture` exercises offline planning without making provider calls. Onboarding responses are stored locally, not sent on WhatsApp. Try `npm run onboarding:chat`; see [onboarding](onboarding.md).
 
 The worker now uses renewable leases and ordered stages. Pending actions do not block onboarding. See [work processing](work-processing.md) for recovery, shutdown, ordering and the `work:retry` command.
+
+See [model plans](model-plans.md) for optional fixture mode, adapter limits and persisted-plan behavior. `MODEL_TIMEOUT_MS` defaults to 20000; live provider calls remain unavailable through worker configuration until consent and spending controls are implemented.
 
 ## 5. Validate
 

@@ -1,6 +1,6 @@
 import type { Pool, PoolClient } from 'pg';
 
-export type WorkStage = 'onboarding' | 'action' | 'receipt';
+export type WorkStage = 'onboarding' | 'action' | 'execution' | 'receipt';
 export interface WorkLease {
   id: string;
   event_id: string;
@@ -11,7 +11,7 @@ export interface WorkLease {
   attempts: number;
   max_attempts: number;
 }
-export type WorkTransition = { nextStage: 'action' | null };
+export type WorkTransition = { nextStage: 'action' | 'execution' | null };
 export class LeaseLostError extends Error {
   constructor() {
     super('Work lease expired or changed owner');
@@ -29,7 +29,7 @@ export class WorkQueue {
 
   async claim(stage: WorkStage, owner: string, leaseMs = 30000): Promise<WorkLease | null> {
     if (
-      !['onboarding', 'action', 'receipt'].includes(stage) ||
+      !['onboarding', 'action', 'execution', 'receipt'].includes(stage) ||
       !owner ||
       owner.length > 100 ||
       !Number.isInteger(leaseMs) ||
@@ -46,7 +46,8 @@ export class WorkQueue {
           WHERE pe.phone_number_id=e.phone_number_id AND pe.kind=e.kind
             AND COALESCE(pe.sender_id,pe.provider_message_id)=COALESCE(e.sender_id,e.provider_message_id)
             AND pe.sequence_no<e.sequence_no AND prev.status<>'completed'
-            AND (prev.stage=q.stage OR (q.stage='action' AND prev.stage='onboarding'))
+            AND (prev.stage=q.stage OR
+              (q.stage IN ('action','execution') AND prev.stage IN ('onboarding','action','execution')))
         )
       ORDER BY e.sequence_no LIMIT 1 FOR UPDATE OF q SKIP LOCKED
     ) UPDATE work_outbox q SET status='leased',lease_token=gen_random_uuid(),lease_owner=$2,
@@ -86,7 +87,8 @@ export class WorkQueue {
       const transition = await apply(client);
       if (
         transition.nextStage !== null &&
-        !(lease.stage === 'onboarding' && transition.nextStage === 'action')
+        !(lease.stage === 'onboarding' && transition.nextStage === 'action') &&
+        !(lease.stage === 'action' && transition.nextStage === 'execution')
       ) {
         throw new Error('Unsupported work stage transition');
       }

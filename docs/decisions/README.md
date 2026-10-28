@@ -15,7 +15,7 @@ Accepted here means a working scaffold/design choice, open to revision with evid
 | First audience/country/languages                     | Small private beta; English fixtures, Toronto dates for tests only | Day 0                                      |
 | Local development capacity                           | Solo developer                                                     | First weekly planning                      |
 | Provider eligibility for personal-assistant use case | Unverified; must check current account/policy                      | Before live integration commitment         |
-| Model provider and models                            | Unselected, behind adapter                                         | M1 evaluation                              |
+| Model provider and models                            | OpenAI first; model ID unselected, behind adapter                  | M1 evaluation                              |
 | Region/hosting/data residency                        | One region, managed Postgres with PITR                             | Before real-data staging                   |
 | User authentication                                  | Select a bounded session/OTP or managed flow                       | Before user API                            |
 | Digest and time defaults                             | Exact times immediate; ambiguous date/time asks                    | M1 product fixtures                        |

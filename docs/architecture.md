@@ -1,6 +1,6 @@
 # Architecture and system design
 
-Status: target system with implemented ingress, identity, tenant isolation and work leases. Updated 2026-10-27. Assumptions: solo developer, small private beta, WhatsApp first, TypeScript, one region, managed PostgreSQL at launch. Country, hosting, languages and provider choices remain open in [decisions](decisions/README.md).
+Status: target system with implemented ingress, identity, tenant isolation, work leases and persisted plans. Updated 2026-10-27. Assumptions: solo developer, small private beta, WhatsApp first, TypeScript, one region, managed PostgreSQL at launch. Country, hosting, languages and provider choices remain open in [decisions](decisions/README.md).
 
 ## Shape and boundaries
 
@@ -26,7 +26,7 @@ flowchart LR
   AUTH --> S
 ```
 
-The API-to-inbox/outbox path, local identity/onboarding, tenant isolation and staged leased worker exist today. Onboarding responses are stored without sending them. Redis is provisionable but unused. Model, scheduler, sender, authenticated API and dashboard remain planned. See [onboarding](onboarding.md) and [work processing](work-processing.md).
+The API-to-inbox/outbox path, local identity/onboarding, tenant isolation, staged leased worker, model adapter and immutable plans exist today. Onboarding responses are stored without sending them. Redis is provisionable but unused. Live model activation, action execution, scheduler, sender, authenticated API and dashboard remain planned. See [onboarding](onboarding.md) and [work processing](work-processing.md).
 
 | Module     | Owns                                                        | Must not own                                  |
 | ---------- | ----------------------------------------------------------- | --------------------------------------------- |
@@ -69,11 +69,13 @@ Redis/BullMQ may later provide wakeups, but queue publication must never mark a 
 
 ## Ordering and action execution (M1)
 
-Ingress acquires transaction advisory locks per business-phone/sender stream before allocating sequence values, in sorted order for batches. Claims select the earliest incomplete item in each stage. Onboarding may advance past action backlog so consent controls remain available. Later actions wait for earlier incomplete onboarding/actions; dead or backing-off predecessors block their stream. Receipt streams use business phone and provider message ID.
+Ingress acquires transaction advisory locks per business-phone/sender stream before allocating sequence values, in sorted order for batches. Claims select the earliest incomplete item in each stage. Onboarding may advance past action backlog so consent controls remain available. Later planning/execution waits for earlier incomplete onboarding, planning and execution; dead or backing-off predecessors block their stream. Receipt streams use business phone and provider message ID.
 
 The acceptance contract is committed ingress order established by stream-lock acquisition, not perfect sender order. Delayed provider messages join the end and cannot reorder committed effects. There is no coalescing window. Current identity rules reject stale control/consent transitions; ambiguous late reference edits need explicit handling when those features arrive. Action handlers must recheck current consent/timezone before preparation and under the user row lock in their final transaction.
 
-Persist the validated model plan before execution. On retry, reuse it; do not regenerate a potentially different list of actions. Derive action keys from inbound event ID + plan version + action index + kind. Within one transaction, insert the action receipt, apply entity changes, and enqueue reply intent. An existing receipt returns the original result. User identity comes from server context. All references must resolve within the user scope. Model-provided confidence is a routing signal, not authorization or calibrated truth.
+The M1-04 planner persists validated decisions and transitions work to a separate execution stage in one fenced transaction. It rechecks consent and timezone under the user row lock. The OpenAI transport is implemented but disabled in the worker; optional fixture mode exercises persistence offline. See [model plans](model-plans.md).
+
+The remaining executor must use the validated model plan saved before execution. On retry, reuse it; do not regenerate a potentially different list of actions. Derive action keys from inbound event ID + plan version + action index + kind. Within one transaction, insert the action receipt, apply entity changes, and enqueue reply intent. An existing receipt returns the original result. User identity comes from server context. All references must resolve within the user scope. Model-provided confidence is a routing signal, not authorization or calibrated truth.
 
 ## Scheduling and delivery (M2)
 

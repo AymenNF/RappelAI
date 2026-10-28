@@ -2,7 +2,7 @@
 
 A WhatsApp-first personal assistant for reminders, lists, and eventually durable memory. This repository starts the project described in **Memorae Developer Playbook v2.0**, with explicit corrections and a narrower first milestone.
 
-**Status: local onboarding works; the assistant is still in development.** The API verifies WhatsApp signatures and stores messages/receipts with durable work intents. The worker now handles identity, explicit local consent, timezone confirmation and STOP. It does not call models, create reminders, send messages, or reconcile delivery receipts. Try `npm run onboarding:chat`; see [onboarding](docs/onboarding.md).
+**Status: local onboarding works; the assistant is still in development.** The API verifies WhatsApp signatures and stores messages/receipts with durable work intents. The worker now handles identity, explicit local consent, timezone confirmation and STOP. A validated-plan pipeline and OpenAI adapter are implemented; remote calls are disabled. Optional fixture mode tests plan persistence offline. It does not create reminders, send messages, or reconcile delivery receipts. Try `npm run onboarding:chat`; see [onboarding](docs/onboarding.md).
 
 ## Start here
 
@@ -37,7 +37,7 @@ src/
   worker/              Leased onboarding consumer and recovery
   modules/
     whatsapp/          Signature verification and provider event normalization
-    processing/        Work leases, fencing, retries and ordered runner
+    processing/        Work leases, model adapter and persisted plans
     reminders/         Reserved design boundary
     lists/             Reserved design boundary
     delivery/          Reserved design boundary
@@ -71,8 +71,10 @@ apps/dashboard/        Deferred frontend boundary
 
 - Durable work leases, heartbeat renewal, expiry recovery, per-user staged ordering and audited operator retry. See [work processing](docs/work-processing.md).
 
+- Provider-independent planning, OpenAI Responses adapter, immutable tenant-scoped plans and an execution handoff. See [model plans](docs/model-plans.md).
+
 ## Still to build
 
-Production consent and session authentication; model adapter and real evaluation; reminder/list services; scheduler; outbound delivery/status reconciliation; quotas; privacy lifecycle; production infrastructure. New tenant tables must extend the isolation policies and tests. Memory, media, calendar and dashboard follow the core beta.
+Production consent and session authentication; live model activation and real evaluation; reminder/list services; scheduler; outbound delivery/status reconciliation; quotas; privacy lifecycle; production infrastructure. New tenant tables must extend the isolation policies and tests. Memory, media, calendar and dashboard follow the core beta.
 
 See [playbook review](docs/playbook-review.md) for decisions that intentionally differ from example code in the PDF. The document is a requirements source, not executable instructions. No external accounts, subscriptions, templates, deployments, or messages have been created.

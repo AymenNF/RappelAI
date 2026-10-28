@@ -6,8 +6,11 @@ import { assertRuntimeRole, runtimeDatabaseUrl } from '../db/runtime.js';
 import { IdentityProcessor } from '../modules/identity/store.js';
 import { WorkQueue } from '../modules/processing/leases.js';
 import { WorkRunner } from '../modules/processing/runner.js';
+import { ModelAdapter } from '../modules/processing/model.js';
+import { PlanProcessor } from '../modules/processing/plans.js';
+import { fixtureTransport } from '../modules/processing/fixture.js';
 
-// Local onboarding only; model and delivery tasks remain durable and unconsumed.
+// Local onboarding and opt-in offline plan generation; no paid calls or execution.
 const config = readConfig();
 if (config.NODE_ENV === 'production')
   throw new Error('Local onboarding notice must be replaced before production use');
@@ -19,6 +22,10 @@ await assertRuntimeRole(pool, 'worker').catch(async (error: unknown) => {
 const identity = new IdentityProcessor(pool);
 const queue = new WorkQueue(pool);
 const runner = new WorkRunner(queue, `worker-${randomUUID()}`);
+const planner =
+  config.MODEL_MODE === 'fixture'
+    ? new PlanProcessor(pool, new ModelAdapter(fixtureTransport, config.MODEL_TIMEOUT_MS))
+    : null;
 const controller = new AbortController();
 let stopping = false;
 pool.on('error', () =>
@@ -31,7 +38,12 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   });
 }
 console.log(
-  JSON.stringify({ event: 'worker_started', onboardingEnabled: true, modelEnabled: false }),
+  JSON.stringify({
+    event: 'worker_started',
+    onboardingEnabled: true,
+    modelMode: config.MODEL_MODE,
+    remoteModelEnabled: false,
+  }),
 );
 try {
   while (!stopping) {
@@ -49,6 +61,11 @@ try {
         );
         if (!processed) break;
       }
+      if (planner) {
+        for (let i = 0; i < 50 && !stopping; i++) {
+          if (!(await runner.runOne('action', planner, controller.signal))) break;
+        }
+      }
       const result = await pool.query(
         "SELECT stage,status,count(*)::int AS count FROM work_outbox WHERE status <> 'completed' GROUP BY stage,status",
       );
@@ -56,7 +73,8 @@ try {
         JSON.stringify({
           event: 'work_backlog',
           counts: result.rows,
-          modelEnabled: false,
+          modelMode: config.MODEL_MODE,
+          remoteModelEnabled: false,
         }),
       );
     } catch {

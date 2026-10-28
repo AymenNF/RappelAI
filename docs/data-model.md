@@ -1,6 +1,6 @@
 # Data model
 
-The executable schema includes `schema_migrations`, `ingress_events`, `work_outbox`, `users`, `identity_results`, `consent_events`, `user_preferences`, and `work_recovery_events`. Migrations 0002/0003 add onboarding. Migration 0004 adds forced RLS, separate runtime grants, preferences, and message/audit ownership constraints. Migration 0005 adds staged renewable work leases, attempt limits and recovery audit. See [tenant isolation](tenant-isolation.md) and [work processing](work-processing.md). The target section describes later extensions; those are not all implemented.
+The executable schema includes `schema_migrations`, `ingress_events`, `work_outbox`, `users`, `identity_results`, `consent_events`, `user_preferences`, `work_recovery_events`, and `action_plans`. Migrations 0002/0003 add onboarding. Migration 0004 adds forced RLS, separate runtime grants, preferences, and message/audit ownership constraints. Migration 0005 adds staged renewable work leases, attempt limits and recovery audit. Migration 0006 adds immutable tenant-scoped plans and the execution stage. See [model plans](model-plans.md). See [tenant isolation](tenant-isolation.md) and [work processing](work-processing.md). The target section describes later extensions; those are not all implemented.
 
 ## Current schema
 
@@ -68,7 +68,7 @@ erDiagram
 
 1. Transport inbox/outbox (done).
 2. Users, consent, roles/RLS and ownership test helpers.
-3. Plans/receipts, lists/items, reminders and outbound intents.
+3. Plans (done in 0006); action receipts, lists/items, reminders and outbound intents remain.
 4. Occurrences, attempts, receipt reconciliation and usage reservations.
 5. Retention/export/deletion jobs and operations indexes.
 6. pgvector extension and memory schema after embedding dimensions are selected; calendar token envelopes separately.
