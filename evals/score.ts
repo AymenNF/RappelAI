@@ -1,48 +1,41 @@
-import { readFile } from 'node:fs/promises';
-import { isDeepStrictEqual } from 'node:util';
+import { readFile, stat } from 'node:fs/promises';
 import { z } from 'zod';
+import { decision } from '../src/contracts/decision.js';
 import { loadGolden } from './lib.js';
-import { decision, validateDecision } from '../src/contracts/decision.js';
-
+import { score, type Prediction } from './metrics.js';
+import { verifyReport } from './reports.js';
 const path = process.argv[2];
-if (!path)
-  throw new Error(
-    'Usage: npm run eval -- path/to/predictions.jsonl. Real predictions required; no mock accuracy scores.',
-  );
-const cases = await loadGolden();
-const prediction = z.object({ id: z.string(), actual: decision }).strict();
-const rows = (await readFile(path, 'utf8'))
-  .trim()
-  .split(/\r?\n/)
-  .map((line) => prediction.parse(JSON.parse(line)));
-const map = new Map(rows.map((row) => [row.id, row.actual]));
-if (
-  map.size !== rows.length ||
-  rows.length !== cases.length ||
-  rows.some((row) => !cases.some((c) => c.id === row.id))
-) {
-  throw new Error('Predictions must contain every golden case exactly once, with no unknown IDs');
+if (!path || process.argv.length !== 3)
+  throw new Error('Usage: npm run eval -- <run-directory | imported-predictions.jsonl>');
+if ((await stat(path)).isDirectory()) {
+  const result = await verifyReport(path);
+  console.log(JSON.stringify(result, null, 2));
+  process.exitCode = result.gatePassed ? 0 : 1;
+} else {
+  // Legacy external predictions remain supported, but carry no trusted run provenance.
+  const cases = await loadGolden();
+  const schema = z.object({ id: z.string(), actual: decision }).strict();
+  const text = await readFile(path, 'utf8');
+  const rows: Prediction[] = text.trim()
+    ? text
+        .trim()
+        .split(/\r?\n/)
+        .map((line) => {
+          const value = schema.parse(JSON.parse(line));
+          return {
+            ...value,
+            error: null,
+            provider: 'imported',
+            model: 'unknown',
+            responseId: null,
+            inputTokens: null,
+            outputTokens: null,
+            latencyMs: 0,
+            inputHash: '0'.repeat(64),
+          };
+        })
+    : [];
+  const metrics = score(cases, rows, 'imported');
+  console.log(JSON.stringify({ source: 'imported', gatePassed: false, metrics }, null, 2));
+  process.exitCode = metrics.qualityPassed ? 0 : 1;
 }
-const failures: string[] = [];
-const categories: Record<string, { passed: number; total: number }> = {};
-for (const item of cases) {
-  const actual = map.get(item.id);
-  let valid = true;
-  try {
-    validateDecision(actual, new Date(item.now));
-  } catch {
-    valid = false;
-  }
-  const passed = valid && isDeepStrictEqual(actual, item.expect);
-  if (!passed) failures.push(item.id);
-  const group = (categories[item.category] ??= { passed: 0, total: 0 });
-  group.total++;
-  if (passed) group.passed++;
-}
-const accuracy = (cases.length - failures.length) / cases.length;
-const injection = categories.injection;
-const passed = accuracy >= 0.9 && (!injection || injection.passed === injection.total);
-console.log(
-  JSON.stringify({ cases: cases.length, accuracy, categories, failures, passed }, null, 2),
-);
-process.exitCode = passed ? 0 : 1;

@@ -65,7 +65,7 @@ apps/dashboard/        Deferred frontend boundary
 - Transactional PostgreSQL inbox + outbox; 503 on storage failure so the provider can retry.
 - Liveness/readiness endpoints, sanitized application logs, graceful process shutdown.
 - Local Compose dependencies, API Dockerfile, typed configuration and migration tooling.
-- Decision validation, 12 labeled starter cases, and an offline scorer for real predictions.
+- Decision validation, 60 agent-reviewed synthetic cases, a real OpenAI evaluation runner and versioned prediction reports. Live measurement and human review remain pending; see [evaluations](evals/README.md).
 - User identities, versioned local consent/audit, confirmed IANA timezones and revocation; synthetic local chat simulator.
 - Separate runtime database roles, forced tenant row security, transaction-local tenant context and ownership checks. See [tenant isolation](docs/tenant-isolation.md).
 
@@ -81,6 +81,6 @@ apps/dashboard/        Deferred frontend boundary
 
 ## Still to build
 
-Production consent and session authentication; live model activation and real evaluation; reminder/list editing and scheduling; live outbound activation, templates and unknown-send reconciliation; broader quotas and billing; privacy lifecycle; production infrastructure. New tenant tables must extend the isolation policies and tests. Memory, media, calendar and dashboard follow the core beta.
+Production consent and session authentication; live model activation, credentialed evaluation and human dataset review; reminder/list editing and scheduling; live outbound activation, templates and unknown-send reconciliation; broader quotas and billing; privacy lifecycle; production infrastructure. New tenant tables must extend the isolation policies and tests. Memory, media, calendar and dashboard follow the core beta.
 
 See [playbook review](docs/playbook-review.md) for decisions that intentionally differ from example code in the PDF. The document is a requirements source, not executable instructions. No external accounts, subscriptions, templates, deployments, or messages have been created.

@@ -30,6 +30,7 @@
     "work:retry": "tsx scripts/work-retry.ts",
     "usage:control": "tsx scripts/usage-control.ts",
     "eval:validate": "tsx evals/validate.ts",
+    "eval:run": "tsx evals/run.ts",
     "eval": "tsx evals/score.ts"
   },
   "dependencies": {
