@@ -49,7 +49,7 @@ export class OpenAITransport implements ModelTransport {
     private readonly apiKey: string,
     readonly model: string,
     private readonly request: typeof fetch = fetch,
-    private readonly maxOutputTokens = 2000,
+    readonly maxOutputTokens = 2000,
   ) {
     if (
       !apiKey ||

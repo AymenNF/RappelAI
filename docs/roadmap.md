@@ -55,7 +55,7 @@ Build in dependency order:
 6. WhatsApp send adapter on the test number and status ingestion; initially test-number traffic only.
 7. Expand to 60 reviewed eval cases and generate real predictions before optimizing prompts.
 
-M1-01 through M1-04 are implemented locally: identity/consent/timezone, tenant isolation, leased ordered onboarding, and the OpenAI adapter with immutable validated plans. Live calls remain disabled; fixture mode verifies persistence without inference. Next is M1-05 usage reservations and spending controls, followed by M1-06 execution and replies. See [model plans](model-plans.md). See [work processing](work-processing.md) for the stage and late-arrival contract.
+M1-01 through M1-05 are implemented locally: identity/consent/timezone, tenant isolation, leased ordered onboarding, the OpenAI adapter with immutable validated plans, and metered reservations with spending controls. Live calls remain disabled; fixture mode verifies persistence without inference. Next is M1-06 execution and replies. See [usage controls](usage-controls.md) for limits and operator recovery. See [model plans](model-plans.md). See [work processing](work-processing.md) for the stage and late-arrival contract.
 
 **Exit demo:** “Remind me tomorrow at 5pm” produces a correctly scoped row and a truthful confirmation. A replay and worker retry produce one entity. “Add milk to grocery” adds one item. An unclear date asks for clarification. A model timeout does not lose or duplicate work. Non-consenting users never reach the model. Real evaluation results are recorded with model/prompt versions.
 

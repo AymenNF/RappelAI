@@ -9,6 +9,7 @@ import { WorkRunner } from '../modules/processing/runner.js';
 import { ModelAdapter } from '../modules/processing/model.js';
 import { PlanProcessor } from '../modules/processing/plans.js';
 import { fixtureTransport } from '../modules/processing/fixture.js';
+import { UsageService } from '../modules/usage/service.js';
 
 // Local onboarding and opt-in offline plan generation; no paid calls or execution.
 const config = readConfig();
@@ -22,6 +23,7 @@ await assertRuntimeRole(pool, 'worker').catch(async (error: unknown) => {
 const identity = new IdentityProcessor(pool);
 const queue = new WorkQueue(pool);
 const runner = new WorkRunner(queue, `worker-${randomUUID()}`);
+const usage = new UsageService(pool);
 const planner =
   config.MODEL_MODE === 'fixture'
     ? new PlanProcessor(pool, new ModelAdapter(fixtureTransport, config.MODEL_TIMEOUT_MS))
@@ -49,6 +51,9 @@ try {
   while (!stopping) {
     try {
       const recovered = await queue.recoverExpired();
+      const usageRecovered = await usage.recover();
+      if (usageRecovered)
+        console.log(JSON.stringify({ event: 'usage_recovered', count: usageRecovered }));
       if (recovered) console.log(JSON.stringify({ event: 'work_recovered', count: recovered }));
       for (let i = 0; i < 50 && !stopping; i++) {
         const processed = await runner.runOne(

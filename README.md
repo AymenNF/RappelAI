@@ -44,7 +44,7 @@ src/
     memory/            Reserved design boundary
     calendar/          Reserved design boundary
     identity/          Local consent, timezone and tenant profiles
-    usage/             Reserved design boundary
+    usage/             Spending reservations, limits and kill switch
   contracts/           Validated model decisions for the first slice
   config/              Environment validation
   db/                  PostgreSQL access and durable ingress
@@ -73,8 +73,10 @@ apps/dashboard/        Deferred frontend boundary
 
 - Provider-independent planning, OpenAI Responses adapter, immutable tenant-scoped plans and an execution handoff. See [model plans](docs/model-plans.md).
 
+- Atomic usage reservations, global/per-user monthly limits, rate snapshots, settlement/recovery and audited pause/resume controls. See [usage controls](docs/usage-controls.md).
+
 ## Still to build
 
-Production consent and session authentication; live model activation and real evaluation; reminder/list services; scheduler; outbound delivery/status reconciliation; quotas; privacy lifecycle; production infrastructure. New tenant tables must extend the isolation policies and tests. Memory, media, calendar and dashboard follow the core beta.
+Production consent and session authentication; live model activation and real evaluation; reminder/list services; scheduler; outbound delivery/status reconciliation; broader quotas and billing; privacy lifecycle; production infrastructure. New tenant tables must extend the isolation policies and tests. Memory, media, calendar and dashboard follow the core beta.
 
 See [playbook review](docs/playbook-review.md) for decisions that intentionally differ from example code in the PDF. The document is a requirements source, not executable instructions. No external accounts, subscriptions, templates, deployments, or messages have been created.

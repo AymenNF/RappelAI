@@ -9,6 +9,14 @@ import {
 } from './leases.js';
 
 export class PermanentWorkError extends Error {}
+export class DeferredWorkError extends Error {
+  constructor(
+    public readonly code:
+      'usage_paused' | 'budget_exhausted' | 'usage_unresolved' | 'rate_unconfigured',
+  ) {
+    super(code);
+  }
+}
 export interface WorkHandler<T> {
   prepare(lease: WorkLease, signal: AbortSignal): Promise<T>;
   apply(client: PoolClient, lease: WorkLease, prepared: T): Promise<WorkTransition>;
@@ -81,7 +89,8 @@ export class WorkRunner {
       });
     } catch (error) {
       // Token/expiry checks make this a no-op if another worker has taken over.
-      if (!lost)
+      if (!lost && error instanceof DeferredWorkError) await this.queue.defer(lease, error.code);
+      else if (!lost)
         await this.queue.fail(
           lease,
           shutdown?.aborted

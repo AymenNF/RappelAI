@@ -13,6 +13,8 @@ import { WorkQueue, LeaseLostError } from '../../src/modules/processing/leases.j
 import { WorkRunner } from '../../src/modules/processing/runner.js';
 import { ModelAdapter, type ModelTransport } from '../../src/modules/processing/model.js';
 import { PlanProcessor, actionKey } from '../../src/modules/processing/plans.js';
+import { UsageControl } from '../../src/modules/usage/control.js';
+import { UsageService } from '../../src/modules/usage/service.js';
 
 if (!process.env.TEST_DATABASE_URL) throw new Error('TEST_DATABASE_URL required');
 test('persisted model plans with restricted runtime logins', { timeout: 30000 }, async (t) => {
@@ -51,6 +53,20 @@ test('persisted model plans with restricted runtime logins', { timeout: 30000 },
     const worker = await login('worker');
     const ingress = await login('ingress');
     const tenant = await login('tenant');
+    const usageControl = new UsageControl(admin);
+    await usageControl.rate(
+      {
+        provider: 'fake',
+        model: 'fake-v1',
+        version: 'test-v1',
+        inputMicrosPerMillion: '0',
+        outputMicrosPerMillion: '0',
+        maxInputTokens: 100000,
+        maxOutputTokens: 1000,
+      },
+      'offline test',
+    );
+    await usageControl.switch(true, 'offline test');
     const queue = new WorkQueue(worker);
     const store = new PostgresIngressStore(ingress);
     let calls = 0;
@@ -74,7 +90,7 @@ test('persisted model plans with restricted runtime logins', { timeout: 30000 },
           return generate(request);
         },
       },
-      100,
+      500,
     );
     const planner = new PlanProcessor(worker, adapter);
     const runner = new WorkRunner(queue, 'planner-test');
@@ -221,7 +237,7 @@ test('persisted model plans with restricted runtime logins', { timeout: 30000 },
     );
 
     await t.test(
-      'invalid output and timeout remain retryable without persisting a partial plan',
+      'invalid output retries after charging; uncertain timeout requires reconciliation',
       async () => {
         for (const fail of ['json', 'timeout']) {
           await reset();
@@ -240,6 +256,24 @@ test('persisted model plans with restricted runtime logins', { timeout: 30000 },
           assert.equal(await planner.read(item.eventId), null);
           assert.equal((await work(item.eventId)).status, 'pending');
           assert.equal((await work(item.eventId)).last_error_code, 'handler_failed');
+          if (fail === 'timeout') {
+            await new UsageService(worker).recover();
+            await admin.query('UPDATE work_outbox SET available_at=clock_timestamp()');
+            await runner.runOne('action', planner);
+            assert.equal(calls, 1);
+            assert.equal((await work(item.eventId)).last_error_code, 'usage_unresolved');
+            const reservation = (
+              await admin.query('SELECT id FROM usage_reservations WHERE event_id=$1', [
+                item.eventId,
+              ])
+            ).rows[0];
+            await new UsageService(admin).reconcile(
+              reservation.id,
+              0,
+              0,
+              'Fake transport sent no paid request',
+            );
+          }
           generate = async () => ({
             text: JSON.stringify(choice),
             model: 'fake-v1',

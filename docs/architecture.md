@@ -1,6 +1,6 @@
 # Architecture and system design
 
-Status: target system with implemented ingress, identity, tenant isolation, work leases and persisted plans. Updated 2026-10-27. Assumptions: solo developer, small private beta, WhatsApp first, TypeScript, one region, managed PostgreSQL at launch. Country, hosting, languages and provider choices remain open in [decisions](decisions/README.md).
+Status: target system with implemented ingress, identity, tenant isolation, work leases, persisted plans and usage controls. Updated 2026-10-27. Assumptions: solo developer, small private beta, WhatsApp first, TypeScript, one region, managed PostgreSQL at launch. Country, hosting, languages and provider choices remain open in [decisions](decisions/README.md).
 
 ## Shape and boundaries
 
@@ -97,7 +97,7 @@ The transport staging tables are internal and pre-user; a narrow ingress role ma
 
 Consent and timezone confirmation precede model processing. Raw content never enters ordinary logs. Model traces use redacted metadata by default. Proposed staging retention is 7 days for unconsented/unprocessed content, 30 days for opted-in raw messages during beta; final policy is an explicit product decision. Secret storage is unsupported in the first version; later encryption must cover inbox, traces, backups and memory, not just a single memory column.
 
-Reserve model/send budget atomically before spending, then settle usage from actual token counts and delivery charges. Rate-limit onboarding and processing separately. Quota exhaustion must be visible; avoid accepting reminders that cannot be delivered under the current plan. A global kill switch pauses new spend while preserving durable work.
+M1-05 reserves model budget atomically in global/user UTC-month counters, then settles trusted token usage separately from plan persistence. It holds uncertain attempts and rechecks the global switch at dispatch. See [usage controls](usage-controls.md). Send-budget integration is a future delivery requirement. Rate-limit onboarding and processing separately. Quota exhaustion must be visible; avoid accepting reminders that cannot be delivered under the current plan. A global kill switch pauses new spend while preserving durable work.
 
 ## Deployment, measurements and growth
 

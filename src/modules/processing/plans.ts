@@ -5,6 +5,7 @@ import { type WorkHandler, PermanentWorkError } from './runner.js';
 import { ModelAdapter, ModelError, type ValidatedPlan } from './model.js';
 import { LeaseLostError, type WorkLease, type WorkTransition } from './leases.js';
 import { hashText, SCHEMA_VERSION } from './prompt.js';
+import { UsageService } from '../usage/service.js';
 
 interface Context extends IdentityState {
   id: string;
@@ -34,10 +35,13 @@ export function actionKey(plan: StoredPlan, index: number): string {
 }
 
 export class PlanProcessor implements WorkHandler<Prepared> {
+  private readonly usage: UsageService;
   constructor(
     private readonly pool: Pool,
     private readonly adapter: ModelAdapter,
-  ) {}
+  ) {
+    this.usage = new UsageService(pool);
+  }
 
   private async context(
     db: Pool | PoolClient,
@@ -86,6 +90,7 @@ export class PlanProcessor implements WorkHandler<Prepared> {
           processingTime: context.db_now,
         },
         signal,
+        (transport, request) => this.usage.generate(lease, context.id, transport, request),
       );
       return { kind: 'new', context, plan };
     } catch (error) {

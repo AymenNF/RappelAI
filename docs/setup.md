@@ -71,7 +71,7 @@ Run the health commands in a third terminal if the worker occupies the second. L
 
 The worker now uses renewable leases and ordered stages. Pending actions do not block onboarding. See [work processing](work-processing.md) for recovery, shutdown, ordering and the `work:retry` command.
 
-See [model plans](model-plans.md) for optional fixture mode, adapter limits and persisted-plan behavior. `MODEL_TIMEOUT_MS` defaults to 20000; live provider calls remain unavailable through worker configuration until consent and spending controls are implemented.
+See [model plans](model-plans.md) for optional fixture mode, adapter limits and persisted-plan behavior. `MODEL_TIMEOUT_MS` defaults to 20000; live provider calls remain unavailable through worker configuration until the replacement consent notice and model/rate qualification are complete. M1-05 controls now default to paused; fixture mode additionally requires the zero-cost rate and explicit resume described in [usage controls](usage-controls.md).
 
 ## 5. Validate
 

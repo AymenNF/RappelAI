@@ -14,6 +14,10 @@ Rollback: stop new spending if needed; roll back compatible application image; p
 
 M1-03 now recovers expired leases on each worker cycle, caps retries and preserves per-user order. Inspect dead work, repair its cause and use `npm run work:retry -- <dead-work-uuid> <operator-label>`. See the [work processing runbook](work-processing.md) for the full contract and known limits. Production alerts and external-send reconciliation below remain planned.
 
+## Spending controls
+
+M1-05 provides `npm run usage:control -- status`, `pause`, `resume`, limit/rate configuration and evidence-based reconciliation. The switch starts off and affects new model dispatch authorizations; already authorized work may finish and settle. Unknown calls retain their reservation. See [usage controls](usage-controls.md) before operating or enabling fixture planning.
+
 ## Signals and initial alert proposals
 
 | Signal                               | Initial target / trigger                                         | Response                                                        |

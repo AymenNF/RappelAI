@@ -161,6 +161,20 @@ export class WorkQueue {
     return result.rowCount ?? 0;
   }
 
+  async defer(
+    lease: WorkLease,
+    code: 'usage_paused' | 'budget_exhausted' | 'usage_unresolved' | 'rate_unconfigured',
+  ): Promise<boolean> {
+    const result = await this.pool.query(
+      `UPDATE work_outbox SET status='pending',attempts=GREATEST(0,attempts-1),
+      available_at=clock_timestamp()+interval '60 seconds',last_error_code=$3,
+      lease_until=NULL,lease_token=NULL,lease_owner=NULL
+      WHERE id=$1 AND lease_token=$2 AND status='leased' AND lease_until>clock_timestamp() RETURNING id`,
+      [lease.id, lease.lease_token, code],
+    );
+    return result.rowCount === 1;
+  }
+
   async requeueDead(id: string, actor: string): Promise<boolean> {
     if (!actor || actor.length > 100) throw new Error('Operator identity required');
     const result = await this.pool.query(

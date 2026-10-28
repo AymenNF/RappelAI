@@ -1,3 +1,5 @@
 # Usage boundary
 
-Planned in M1–M3: atomic spend reservations before paid work, append-only usage events, monthly counters, configurable effective-dated rates, plan caps and a global stop. Persist settlement separately from the estimate.
+Implemented in M1-05: atomic global/per-user UTC-month reservations, integer USD-micro accounting, versioned rate snapshots, idempotent settlement, uncertain-call holds, recovery and a global dispatch stop. The planner invokes this gate before each new provider attempt. Operator changes and reconciliation are audited.
+
+See [usage controls](../../../docs/usage-controls.md). Live model pricing/qualification, paid sending, billing integration, user-facing quota responses and production operator provisioning remain future work.

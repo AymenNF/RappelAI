@@ -28,6 +28,7 @@
     "onboarding:chat": "tsx scripts/onboarding-chat.ts",
     "smoke": "tsx scripts/local-smoke.ts",
     "work:retry": "tsx scripts/work-retry.ts",
+    "usage:control": "tsx scripts/usage-control.ts",
     "eval:validate": "tsx evals/validate.ts",
     "eval": "tsx evals/score.ts"
   },

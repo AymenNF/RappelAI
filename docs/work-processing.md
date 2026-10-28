@@ -29,7 +29,7 @@ On startup and each polling cycle, the worker recovers up to 100 expired leases.
 
 SIGINT/SIGTERM stops claims and cancels preparation. Even preparation that ignores cancellation cannot later apply its result through the runner. Live owned work is released for immediate retry; an expired/lost lease is left for recovery. Shutdown consumes the claimed attempt, so repeated shutdowns can exhaust a task. Short database effects finish or roll back before the pool closes; runtime queries have a five-second statement timeout. If the process is killed, its last lease expires and another process recovers it.
 
-This provides atomic database effects with retryable preparation. It does not make model calls or provider sends exactly once; persisted plans are implemented in M1-04, while usage reservations, action receipts and external-send uncertainty handling remain later milestones.
+This provides atomic database effects with retryable preparation. It does not make model calls or provider sends exactly once; persisted plans are implemented in M1-04, while usage reservations are implemented in M1-05; action receipts and external-send uncertainty handling remain later milestones.
 
 ## Operating locally
 
@@ -58,3 +58,5 @@ This resets attempts, preserves ordering and records the label. The label is an 
 ## Evidence
 
 Real PostgreSQL tests use non-owner ingress/worker logins and disposable schemas. They cover simultaneous claims, independent users/business phones, ordered batches, abandoned lease recovery, stale-token fencing, atomic rollback, retry exhaustion, audited operator retry, stage separation, heartbeat extension, lease loss, cancellation-ignoring preparation, permanent failures and ingress transaction visibility. Identity tests additionally verify that STOP invalidates earlier ready work and old work cannot revive under a new consent grant. These are local correctness checks, not production load or external-delivery tests.
+
+M1-05 adds metered model dispatch. Budget/kill/rate/uncertainty denials defer the work by 60 seconds without consuming its claim attempt. Unknown provider usage retains its reservation until reconciliation. The worker runs usage recovery alongside lease recovery. See [usage controls](usage-controls.md).

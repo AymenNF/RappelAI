@@ -1,0 +1,9 @@
+{
+  "provider": "fixture",
+  "model": "fixed-clarify-v1",
+  "version": "offline-v1",
+  "inputMicrosPerMillion": "0",
+  "outputMicrosPerMillion": "0",
+  "maxInputTokens": 100000,
+  "maxOutputTokens": 2000
+}

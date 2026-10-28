@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { validateDecision, type Decision } from '../../contracts/decision.js';
 import { INTENT_PROMPT, PROMPT_SHA256, PROMPT_VERSION, hashText } from './prompt.js';
+import { DeferredWorkError } from './runner.js';
 
 export class ModelError extends Error {
   constructor(
@@ -31,6 +32,7 @@ export interface ModelRequest {
 export interface ModelTransport {
   provider: string;
   model: string;
+  maxOutputTokens?: number;
   generate(request: ModelRequest): Promise<unknown>;
 }
 const output = z
@@ -63,7 +65,14 @@ export class ModelAdapter {
     if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 120000)
       throw new Error('Invalid model timeout');
   }
-  async plan(context: ModelContext, signal: AbortSignal): Promise<ValidatedPlan> {
+  async plan(
+    context: ModelContext,
+    signal: AbortSignal,
+    invoke: (transport: ModelTransport, request: ModelRequest) => Promise<unknown> = (
+      transport,
+      request,
+    ) => transport.generate(request),
+  ): Promise<ValidatedPlan> {
     if (signal.aborted) throw new ModelError('cancelled');
     if (!context.message.trim() || context.message.length > 16000)
       throw new ModelError('too_large');
@@ -88,7 +97,7 @@ export class ModelAdapter {
       const response = await Promise.race([
         Promise.resolve().then(() => {
           if (cancellation.signal.aborted) throw cancellation.signal.reason;
-          return this.transport.generate({
+          return invoke(this.transport, {
             system: INTENT_PROMPT,
             input,
             signal: cancellation.signal,
@@ -112,7 +121,7 @@ export class ModelAdapter {
         latencyMs: Math.round(performance.now() - started),
       };
     } catch (error) {
-      if (error instanceof ModelError) throw error;
+      if (error instanceof ModelError || error instanceof DeferredWorkError) throw error;
       // Provider bodies and user content must never escape in error messages.
       throw new ModelError('invalid_output');
     } finally {
