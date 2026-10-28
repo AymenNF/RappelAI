@@ -6,6 +6,8 @@ A WhatsApp-first personal assistant for reminders, lists, and eventually durable
 
 ## Start here
 
+For a beginner-friendly walkthrough, read the [illustrated project guide (PDF)](output/pdf/memorae-project-guide.pdf): examples, architecture, database, completed milestones and next steps through M1-08.
+
 1. [Local setup](docs/setup.md) — install, configure, run, and verify.
 2. [Roadmap](docs/roadmap.md) — milestones, dependencies, acceptance gates, and your first week.
 3. [Work organization](docs/workflow.md) — board, task sizing, weekly routine, and definition of done.
