@@ -1,24 +1,20 @@
-# Foundation verification — 2026-10-27
+# Local setup and M1 verification — 2026-10-27
 
-## Completed locally
+## Completed
 
-- Dependencies installed with exact versions and a generated `package-lock.json`.
-- Local `.env` generated once using random webhook secrets; ignored by Git.
-- `npm run check` passes: strict TypeScript, 13 unit tests, 12 evaluation fixture validations, production TypeScript build, and formatting.
-- Compiled API passed a localhost HTTP smoke test: liveness 200, readiness 503 with an intentionally unavailable test store; server closed afterward.
-- All 17 local links checked across the README and design documents resolve. Git ignores the environment file, dependency cache, dependencies and build output.
-- Unit coverage includes original-byte signature verification, verification challenge, replay identity, unsigned/malformed/oversized bodies, storage failure, readiness, mixed batches, status identity, future timestamps and restricted tool decisions.
-- npm reported zero known dependency vulnerabilities after updating Zod to the patched release. This is a point-in-time dependency report, not a security certification.
+- Located existing Docker Desktop 4.97.0, verified WSL 2, and restarted the stalled engine. Docker Engine 29.9.2 and Compose 5.6.1 respond successfully.
+- Started PostgreSQL 16 locally; health check passes on localhost:5432, with a persistent named volume.
+- Applied migrations 0001, 0002 and 0003. Re-running applied migrations is a no-op; checksum tracking remains intact.
+- Real PostgreSQL tests pass: concurrent webhook deduplication, atomic rollback, isolated identities, ordered onboarding, consent/token handling, revocation, service-window behavior and future-timestamp rejection.
+- Local HTTP smoke passes with the actual PostgreSQL store: liveness and readiness return 200; the temporary server closes afterward.
+- Built the API Docker image `memorae-local:dev` successfully.
+- Unit suite contains 21 tests; 12 evaluation fixtures validate. TypeScript, build and formatting checks pass.
+- Exercised the synthetic onboarding chat against local PostgreSQL. No WhatsApp sends or model calls were made.
 
-## Included but not executed here
+## Current runtime behavior
 
-- Real PostgreSQL integration test for concurrent deduplication and transaction rollback.
-- Migration application/re-run against PostgreSQL.
-- Docker Compose and image builds.
-- GitHub Actions workflow execution on a remote repository.
+The worker handles local onboarding and persists responses. Normal requests passing onboarding remain pending for future feature processing. The chat simulator displays stored responses directly. API/simulator test processes close after verification; Docker and PostgreSQL remain running. Start API/worker with `npm run dev` and `npm run dev:worker`, or run the simulator directly with `npm run onboarding:chat`.
 
-Docker/PostgreSQL was not available through the local command environment. These checks remain M0-02, with commands in [setup](setup.md). No live database correctness, throughput or delivery SLO has been claimed.
+## Remaining limits
 
-## Intentionally not implemented or measured
-
-The worker does not consume tasks. Model calls, actual AI accuracy, reminder/list mutations, scheduling, WhatsApp sends, receipt reconciliation, user authentication, consent, tenant RLS, export/deletion and production deployment are roadmap work. The evaluation scorer accepts real prediction files; validating fixtures does not establish model performance. No external messages were sent.
+This is local testing, not production consent. Real-user onboarding needs a new notice, processor/retention choices, tenant roles/RLS and WhatsApp delivery. Model integration, actual AI accuracy, general job leases, reminder/list services, scheduling, delivery reconciliation, export/deletion and production infrastructure remain roadmap work. No delivery or latency SLO has been established. GitHub Actions is configured but has not run remotely in this task. Changes are local and uncommitted.

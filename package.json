@@ -21,8 +21,11 @@
     "format:check": "prettier --check .",
     "check": "npm run typecheck && npm test && npm run eval:validate && npm run build && npm run format:check",
     "db:migrate": "tsx scripts/migrate.ts",
-    "infra:up": "docker compose up -d --wait",
-    "infra:down": "docker compose down",
+    "infra:up": "node scripts/docker.mjs compose up -d --wait",
+    "infra:down": "node scripts/docker.mjs compose down",
+    "infra:status": "node scripts/docker.mjs compose ps",
+    "onboarding:chat": "tsx scripts/onboarding-chat.ts",
+    "smoke": "tsx scripts/local-smoke.ts",
     "eval:validate": "tsx evals/validate.ts",
     "eval": "tsx evals/score.ts"
   },

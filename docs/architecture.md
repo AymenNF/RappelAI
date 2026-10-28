@@ -26,7 +26,7 @@ flowchart LR
   AUTH --> S
 ```
 
-Only the API-to-inbox/outbox path and worker backlog diagnostics exist today. Redis is provisionable, not integrated. Model, scheduler, sender, authenticated API and dashboard are planned.
+The API-to-inbox/outbox path and local identity/onboarding processor exist today. The worker serializes short onboarding transactions and stores responses without sending them. Redis is provisionable, not integrated. General task leases, model, scheduler, sender, authenticated API and dashboard are planned. See [onboarding](onboarding.md).
 
 | Module     | Owns                                                        | Must not own                                  |
 | ---------- | ----------------------------------------------------------- | --------------------------------------------- |

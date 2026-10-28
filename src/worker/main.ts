@@ -1,10 +1,14 @@
 import { setTimeout } from 'node:timers/promises';
 import { readConfig } from '../config/env.js';
 import { createPool } from '../db/pool.js';
+import { IdentityProcessor } from '../modules/identity/store.js';
 
-// Foundation diagnostic only. Do not consume or acknowledge work before handlers exist.
+// Local onboarding only; model and delivery tasks remain durable and unconsumed.
 const config = readConfig();
+if (config.NODE_ENV === 'production')
+  throw new Error('Local onboarding notice must be replaced before production use');
 const pool = createPool(config.DATABASE_URL);
+const identity = new IdentityProcessor(pool);
 const controller = new AbortController();
 let stopping = false;
 pool.on('error', () =>
@@ -16,10 +20,17 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     controller.abort();
   });
 }
-console.log(JSON.stringify({ event: 'worker_foundation_started', processingEnabled: false }));
+console.log(
+  JSON.stringify({ event: 'worker_started', onboardingEnabled: true, modelEnabled: false }),
+);
 try {
   while (!stopping) {
     try {
+      for (let i = 0; i < 50 && !stopping; i++) {
+        const processed = await identity.processNext();
+        if (!processed) break;
+        console.log(JSON.stringify({ event: 'onboarding_processed', ...processed }));
+      }
       const result = await pool.query(
         "SELECT count(*)::int AS pending FROM work_outbox WHERE status <> 'completed'",
       );
@@ -27,7 +38,7 @@ try {
         JSON.stringify({
           event: 'work_backlog',
           pending: result.rows[0].pending,
-          processingEnabled: false,
+          modelEnabled: false,
         }),
       );
     } catch {

@@ -1,6 +1,6 @@
 # Data model
 
-Only `schema_migrations`, `ingress_events`, and `work_outbox` exist in the executable foundation. Everything below the current section is a design to implement in milestone-sized migrations, not a claim that those tables already exist.
+The executable schema includes `schema_migrations`, `ingress_events`, `work_outbox`, `users`, `identity_results`, and `consent_events`. Migrations 0002/0003 add local identity/consent/timezone state and version-bound consent challenges. The target section describes later extensions; those are not all implemented.
 
 ## Current schema
 

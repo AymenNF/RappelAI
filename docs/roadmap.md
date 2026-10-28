@@ -39,7 +39,7 @@ Estimate: 1–3 days total. Goal: reproducible setup and agreed architecture.
 
 Completed in this scaffold: source boundaries, TypeScript API/worker, signed ingress, transactional inbox/outbox, migration runner, local infra config, CI definition, unit/integration tests, draft contracts/prompt, 12 evaluation fixtures and offline scoring, system design and backlog.
 
-Remaining exit work: run Compose and PostgreSQL tests, verify migration re-run, make the initial Git commit, choose issue tracker and review the open decisions. Real AI evaluation and worker consumption are not complete.
+Local Compose, migration re-run, PostgreSQL integration tests, API readiness and Docker image build are now verified. The repository has an initial commit and remote. Choose the issue tracker and review open decisions. M1 identity/consent/timezone handling now works locally; real AI evaluation, general work consumption and outbound sending are not complete. See [onboarding](onboarding.md).
 
 **Exit demo:** signed fixture persists once under replay; unsigned data is rejected; simulated storage outage gets 503; database returns to ready after recovery. Save evidence in the work item.
 

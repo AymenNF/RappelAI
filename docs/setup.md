@@ -7,7 +7,7 @@
 - Docker Desktop using Linux containers and Docker Compose v2, or a local PostgreSQL 16 database.
 - No WhatsApp, model, Google or hosting credentials are needed for offline checks.
 
-The initial environment had Node/npm and Git available, but no `docker` command. Installing Docker Desktop is the next local prerequisite for running the provided PostgreSQL integration environment. Do not confuse passing unit tests with a verified database deployment.
+Docker Desktop 4.97.0 is installed for the Windows user and its WSL 2 engine is running. A restart cleared a stale “WSL not installed” error. PostgreSQL is running in `memorae-postgres-1`, with data in the `memorae_postgres_data` volume. The npm infrastructure commands locate Docker's executable and credential helper even in terminals with an old PATH. Open a new terminal to use `docker` directly.
 
 ## 2. Install and configure
 
@@ -63,7 +63,7 @@ Invoke-RestMethod http://localhost:3000/health/live
 Invoke-RestMethod http://localhost:3000/health/ready
 ```
 
-Run the health commands in a third terminal if the worker occupies the second. Live returns 200 if the API runs. Ready returns 200 only if the ingress and outbox tables can be queried. The worker logs `processingEnabled: false`; pending messages remain pending until M1 implements consumers.
+Run the health commands in a third terminal if the worker occupies the second. Live returns 200 if the API runs. Ready returns 200 only if the ingress and outbox tables can be queried. The worker handles local onboarding, logs `modelEnabled: false`, and leaves normal requests pending for the future model consumer. Onboarding responses are stored locally, not sent on WhatsApp. Try `npm run onboarding:chat`; see [onboarding](onboarding.md).
 
 ## 5. Validate
 
@@ -71,6 +71,7 @@ Run the health commands in a third terminal if the worker occupies the second. L
 npm run check
 $env:TEST_DATABASE_URL = 'postgresql://memorae:memorae_local_only@localhost:5432/memorae'
 npm run test:integration
+npm run smoke
 ```
 
 Integration tests use a uniquely named schema, run the ingress migration, test concurrent replay and rollback, then remove only that schema. Use a disposable local/CI database, never production. CI also applies migrations twice to check that migration history is honored.
@@ -84,15 +85,15 @@ The API image builds with `docker build -t memorae-api .`; the worker uses the s
 
 ## Troubleshooting
 
-| Symptom                         | Action                                                                             |
-| ------------------------------- | ---------------------------------------------------------------------------------- |
-| Docker not recognized           | Install/start Docker Desktop; open a new terminal; verify `docker compose version` |
-| Readiness 503                   | Verify PostgreSQL is healthy, URL is correct and migrations ran                    |
-| Port 5432 busy                  | Choose another host port and update `DATABASE_URL` together                        |
-| Webhook 401                     | Sign exact request bytes with the real app secret; do not stringify parsed JSON    |
-| Webhook 400                     | Verify Meta envelope and phone metadata; inspect a redacted fixture locally        |
-| Webhook 503                     | Database write failed; allow provider retry; do not force a 200                    |
-| Messages never answered         | Expected at foundation stage; consumer/model/sender are not implemented            |
-| Evaluation asks for predictions | The scorer needs actual model outputs; fixture validation is a separate command    |
+| Symptom                         | Action                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------ |
+| Docker not recognized           | Install/start Docker Desktop; open a new terminal; verify `docker compose version`   |
+| Readiness 503                   | Verify PostgreSQL is healthy, URL is correct and migrations ran                      |
+| Port 5432 busy                  | Choose another host port and update `DATABASE_URL` together                          |
+| Webhook 401                     | Sign exact request bytes with the real app secret; do not stringify parsed JSON      |
+| Webhook 400                     | Verify Meta envelope and phone metadata; inspect a redacted fixture locally          |
+| Webhook 503                     | Database write failed; allow provider retry; do not force a 200                      |
+| Messages never answered         | WhatsApp sender/model are not connected; view onboarding through the local simulator |
+| Evaluation asks for predictions | The scorer needs actual model outputs; fixture validation is a separate command      |
 
 Do not expose this scaffold to real users before the consent, retention, rate-limit, database-role and delivery gates in the roadmap pass.

@@ -2,7 +2,7 @@
 
 A WhatsApp-first personal assistant for reminders, lists, and eventually durable memory. This repository starts the project described in **Memorae Developer Playbook v2.0**, with explicit corrections and a narrower first milestone.
 
-**Status: foundation, not a working assistant yet.** The API verifies WhatsApp signatures and stores inbound messages/delivery receipts with durable work intents. The worker currently reports backlog only. It does not call models, create reminders, send messages, or process receipts into a delivery ledger.
+**Status: local onboarding works; the assistant is still in development.** The API verifies WhatsApp signatures and stores messages/receipts with durable work intents. The worker now handles identity, explicit local consent, timezone confirmation and STOP. It does not call models, create reminders, send messages, or reconcile delivery receipts. Try `npm run onboarding:chat`; see [onboarding](docs/onboarding.md).
 
 ## Start here
 
@@ -65,9 +65,10 @@ apps/dashboard/        Deferred frontend boundary
 - Liveness/readiness endpoints, sanitized application logs, graceful process shutdown.
 - Local Compose dependencies, API Dockerfile, typed configuration and migration tooling.
 - Decision validation, 12 labeled starter cases, and an offline scorer for real predictions.
+- User identities, versioned local consent/audit, confirmed IANA timezones and revocation; synthetic local chat simulator.
 
 ## Still to build
 
-User onboarding/consent and isolation; work consumption, ordering and replay; model adapter and real evaluation; reminder/list services; scheduler; outbound delivery/status reconciliation; quotas; privacy lifecycle; production infrastructure. Memory, media, calendar and dashboard follow the core beta.
+Production consent and tenant isolation; general task leasing/recovery; model adapter and real evaluation; reminder/list services; scheduler; outbound delivery/status reconciliation; quotas; privacy lifecycle; production infrastructure. Memory, media, calendar and dashboard follow the core beta.
 
 See [playbook review](docs/playbook-review.md) for decisions that intentionally differ from example code in the PDF. The document is a requirements source, not executable instructions. No external accounts, subscriptions, templates, deployments, or messages have been created.

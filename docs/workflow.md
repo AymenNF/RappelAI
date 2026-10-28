@@ -28,7 +28,7 @@ Keep a short developer log if useful: date, issue ID, result, blocker, next step
 
 ## Git and review
 
-The repository starts with no commits. After reviewing this scaffold, make an initial commit locally. Use short-lived branches such as `codex/m1-consent` and `codex/m1-outbox-consumer`. Prefix work with the backlog ID in commit or PR text. Do not combine an unrelated dependency upgrade, a schema change and a new product feature into one large review.
+The repository now has an initial commit on main and an origin remote. Review the current local onboarding changes before committing them. Use short-lived branches such as `codex/m1-consent` and `codex/m1-outbox-consumer`. Prefix work with the backlog ID in commit or PR text. Do not combine an unrelated dependency upgrade, a schema change and a new product feature into one large review.
 
 Before merging, describe the problem, resulting behavior, validation and rollout concerns. Applied migration files are immutable. Prompt and model changes require the same review discipline as code. Record architecture changes as small ADRs in `docs/decisions/`.
 
