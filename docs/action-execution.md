@@ -35,7 +35,7 @@ Successful replies are rendered from committed action results, with bounded prev
 
 The only intent states are `pending` and `suppressed`. They are local durable records, not provider acceptance or delivery evidence. A changed consent or timezone snapshot at execution produces a blocked outcome and a suppressed generic reply with no product mutations. A later STOP, pending timezone change or new confirmation suppresses already pending replies in the onboarding transaction. Re-consent does not revive them.
 
-STOP does not delete previously saved reminders/list items in this milestone. Future scheduling and sending must recheck current eligibility, consent/grant snapshots, cancellation, service window and spending controls before sending. Onboarding responses continue to live in `identity_results`; this milestone's reply intents cover saved-plan outcomes. M1-07 must integrate those sources with an actual sender, and M2 must handle delivery uncertainty and receipts.
+STOP does not delete previously saved reminders/list items in this milestone. Future scheduling and sending must recheck current eligibility, consent/grant snapshots, cancellation, service window and spending controls before sending. Onboarding responses continue to live in `identity_results`; this milestone's reply intents cover saved-plan outcomes. M1-07 integrates both sources with a test dispatcher and receipt consumer; live sending remains disabled. M2 must add scheduling, templates and audited unknown-send reconciliation.
 
 ## Inspection and isolation
 
@@ -58,4 +58,4 @@ These fields contain user data; ordinary worker logs contain only backlog/recove
 
 Restricted-login PostgreSQL tests exercise simultaneous workers, replay, injected reply failure, final lease expiry, normalized list reuse, repeated items, concurrent appends, mixed-plan rejection, consent/timezone invalidation, STOP suppression, non-action replies, malformed plans, RLS/foreign-key isolation and the metered-planning-to-execution path. Unit tests cover normalization, bounded rendering and an ambiguous fall-back local time with an explicit UTC offset.
 
-Next is M1-07: test-number WhatsApp send adapter and receipt handling. Real model selection/qualification, replacement consent, provider setup and template approvals remain external prerequisites. No message was sent and no reminder-delivery SLO was established by these tests.
+M1-07 now implements the test-only WhatsApp adapter, dispatcher and receipt handler. See [WhatsApp delivery](whatsapp-delivery.md). Next is M1-08 evaluation. Real model selection/qualification, replacement consent, provider setup and template approvals remain external prerequisites. No message was sent and no reminder-delivery SLO was established by these tests.

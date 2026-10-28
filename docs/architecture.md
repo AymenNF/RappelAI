@@ -91,6 +91,8 @@ Internal state changes are idempotent under retries. External exactly-once sendi
 
 Store delivery receipts before matching them. A status may arrive before the send response is committed. Merge positive progress monotonically (`accepted → sent → delivered → read`), retain event history, and prevent a late failure from erasing evidence of delivery. Receipt timestamps, not worker receipt time, measure delivery where trustworthy. Provider acceptance and delivery have different metrics.
 
+M1-07 implements this boundary for test replies: one durable attempt per source event, bounded transport, separate acceptance/delivery states, and an active leased receipt consumer. Uncertain calls are held without redispatch. Receipt and send-result transactions share a provider-message lock to reconcile early evidence. The regular worker does not construct a live sender; Meta qualification, replacement consent, delivery pricing, templates and audited retry/reconciliation remain prerequisites for outbound activation. See [WhatsApp delivery](whatsapp-delivery.md).
+
 ## Isolation, privacy and spend
 
 The transport staging tables are internal and pre-user; a narrow ingress role may insert/dedupe only. Product tables use tenant-aware foreign keys and forced RLS, with `SET LOCAL app.user_id` inside every application transaction. Runtime roles must not own tables or have superuser/BYPASSRLS privileges. Scheduler access is narrow and explicit. Test cross-user reads, writes, foreign keys and pooled-connection reuse before any user CRUD endpoint ships.

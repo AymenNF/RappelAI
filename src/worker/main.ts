@@ -11,6 +11,7 @@ import { PlanProcessor } from '../modules/processing/plans.js';
 import { fixtureTransport } from '../modules/processing/fixture.js';
 import { UsageService } from '../modules/usage/service.js';
 import { ExecutionProcessor } from '../modules/processing/execution.js';
+import { ReceiptProcessor } from '../modules/whatsapp/receipts.js';
 
 // Local onboarding, optional offline planning and transactional execution; no provider sends.
 const config = readConfig();
@@ -26,6 +27,7 @@ const queue = new WorkQueue(pool);
 const runner = new WorkRunner(queue, `worker-${randomUUID()}`);
 const usage = new UsageService(pool);
 const execution = new ExecutionProcessor();
+const receipts = new ReceiptProcessor();
 const planner =
   config.MODEL_MODE === 'fixture'
     ? new PlanProcessor(pool, new ModelAdapter(fixtureTransport, config.MODEL_TIMEOUT_MS))
@@ -48,6 +50,8 @@ console.log(
     modelMode: config.MODEL_MODE,
     remoteModelEnabled: false,
     executionEnabled: true,
+    receiptHandlingEnabled: true,
+    whatsappSendingEnabled: false,
   }),
 );
 try {
@@ -58,6 +62,9 @@ try {
       if (usageRecovered)
         console.log(JSON.stringify({ event: 'usage_recovered', count: usageRecovered }));
       if (recovered) console.log(JSON.stringify({ event: 'work_recovered', count: recovered }));
+      for (let i = 0; i < 50 && !stopping; i++) {
+        if (!(await runner.runOne('receipt', receipts, controller.signal))) break;
+      }
       for (let i = 0; i < 50 && !stopping; i++) {
         const processed = await runner.runOne(
           'onboarding',

@@ -2,7 +2,7 @@
 
 A WhatsApp-first personal assistant for reminders, lists, and eventually durable memory. This repository starts the project described in **Memorae Developer Playbook v2.0**, with explicit corrections and a narrower first milestone.
 
-**Status: local onboarding works; the assistant is still in development.** The API verifies WhatsApp signatures and stores messages/receipts with durable work intents. The worker now handles identity, explicit local consent, timezone confirmation and STOP. A validated-plan pipeline and OpenAI adapter are implemented; remote calls are disabled. Optional fixture mode tests plan persistence offline. Saved plans now create reminders/list items, action receipts and pending reply intents. It does not schedule or send reminders, send replies, or reconcile delivery receipts. Try `npm run onboarding:chat`; see [onboarding](docs/onboarding.md).
+**Status: local onboarding works; the assistant is still in development.** The API verifies WhatsApp signatures and stores messages/receipts with durable work intents. The worker now handles identity, explicit local consent, timezone confirmation and STOP. A validated-plan pipeline and OpenAI adapter are implemented; remote calls are disabled. Optional fixture mode tests plan persistence offline. Saved plans now create reminders/list items, action receipts and pending reply intents. The worker now reconciles delivery receipts; a tested Cloud API adapter and durable test dispatcher are implemented. Live sending and reminder scheduling remain disabled. See [WhatsApp delivery](docs/whatsapp-delivery.md). Try `npm run onboarding:chat`; see [onboarding](docs/onboarding.md).
 
 ## Start here
 
@@ -36,7 +36,7 @@ src/
   api/                 Fastify app and API process
   worker/              Leased onboarding consumer and recovery
   modules/
-    whatsapp/          Signature verification and provider event normalization
+    whatsapp/          Signed ingress, send adapter and receipt reconciliation
     processing/        Work leases, model adapter and persisted plans
     reminders/         Transactional one-time reminder creation
     lists/             Owner-scoped named lists and append services
@@ -77,8 +77,10 @@ apps/dashboard/        Deferred frontend boundary
 
 - Atomic reminder/list mutations, action receipts, execution outcomes and durable reply intents. See [action execution](docs/action-execution.md).
 
+- Test-only durable WhatsApp dispatch and worker receipt reconciliation, with acceptance distinguished from delivery. See [WhatsApp delivery](docs/whatsapp-delivery.md).
+
 ## Still to build
 
-Production consent and session authentication; live model activation and real evaluation; reminder/list editing and scheduling; outbound delivery/status reconciliation; broader quotas and billing; privacy lifecycle; production infrastructure. New tenant tables must extend the isolation policies and tests. Memory, media, calendar and dashboard follow the core beta.
+Production consent and session authentication; live model activation and real evaluation; reminder/list editing and scheduling; live outbound activation, templates and unknown-send reconciliation; broader quotas and billing; privacy lifecycle; production infrastructure. New tenant tables must extend the isolation policies and tests. Memory, media, calendar and dashboard follow the core beta.
 
 See [playbook review](docs/playbook-review.md) for decisions that intentionally differ from example code in the PDF. The document is a requirements source, not executable instructions. No external accounts, subscriptions, templates, deployments, or messages have been created.

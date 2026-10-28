@@ -1,6 +1,6 @@
 # Data model
 
-The executable schema includes `schema_migrations`, `ingress_events`, `work_outbox`, `users`, `identity_results`, `consent_events`, `user_preferences`, `work_recovery_events`, and `action_plans`. Migrations 0002/0003 add onboarding. Migration 0004 adds forced RLS, separate runtime grants, preferences, and message/audit ownership constraints. Migration 0005 adds staged renewable work leases, attempt limits and recovery audit. Migration 0006 adds immutable tenant-scoped plans and the execution stage. See [model plans](model-plans.md). See [tenant isolation](tenant-isolation.md) and [work processing](work-processing.md). Migration 0007 adds usage policy, per-user limits, model rate cards, monthly global/user counters, reservations and operator audit. See [usage controls](usage-controls.md). Migration 0008 adds `lists`, `list_items`, `reminders`, `action_receipts`, `plan_executions`, and `reply_intents`, with forced RLS and owner-aware foreign keys. See [action execution](action-execution.md). The target section describes later extensions; those are not all implemented.
+The executable schema includes `schema_migrations`, `ingress_events`, `work_outbox`, `users`, `identity_results`, `consent_events`, `user_preferences`, `work_recovery_events`, and `action_plans`. Migrations 0002/0003 add onboarding. Migration 0004 adds forced RLS, separate runtime grants, preferences, and message/audit ownership constraints. Migration 0005 adds staged renewable work leases, attempt limits and recovery audit. Migration 0006 adds immutable tenant-scoped plans and the execution stage. See [model plans](model-plans.md). See [tenant isolation](tenant-isolation.md) and [work processing](work-processing.md). Migration 0007 adds usage policy, per-user limits, model rate cards, monthly global/user counters, reservations and operator audit. See [usage controls](usage-controls.md). Migration 0008 adds `lists`, `list_items`, `reminders`, `action_receipts`, `plan_executions`, and `reply_intents`, with forced RLS and owner-aware foreign keys. See [action execution](action-execution.md). Migration 0009 adds `whatsapp_attempts` and `whatsapp_receipts`, forced tenant RLS, source ownership constraints and delivery address bindings. See [WhatsApp delivery](whatsapp-delivery.md). The target section describes later extensions; those are not all implemented.
 
 ## Current schema
 
@@ -68,8 +68,8 @@ erDiagram
 
 1. Transport inbox/outbox (done).
 2. Users, consent, roles/RLS and ownership test helpers.
-3. Plans (0006), action receipts, lists/items, reminders and reply intents (0008) are implemented. A delivery ledger and actual sends remain.
-4. Usage reservations (done in 0007); occurrences, delivery attempts and receipt reconciliation remain.
+3. Plans (0006), action receipts, lists/items, reminders and reply intents (0008) are implemented. The test delivery ledger is implemented in 0009; live activation remains.
+4. Usage reservations (done in 0007); test send attempts and receipt reconciliation are implemented in 0009; occurrences, templates and automated retry/reconciliation remain.
 5. Retention/export/deletion jobs and operations indexes.
 6. pgvector extension and memory schema after embedding dimensions are selected; calendar token envelopes separately.
 

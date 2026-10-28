@@ -13,7 +13,7 @@ There are four stages (migration 0006 adds execution):
 | `onboarding` | Identity, consent, timezone and STOP; handled/blocked items complete                 | Earliest incomplete onboarding item per sender                                 |
 | `action`     | Ready identities transition here; optional fixture planner persists a validated plan | Earlier incomplete onboarding, action or execution items block later planning  |
 | `execution`  | Consumes immutable plan; commits entities, receipts and unsent reply intent          | Earlier incomplete onboarding, action or execution items block later execution |
-| `receipt`    | Stored durably; reconciliation handler not enabled yet                               | Provider message order within a business phone                                 |
+| `receipt`    | Consumes receipt evidence and reconciles known send attempts                         | Provider message order within a business phone                                 |
 
 Onboarding can advance past pending actions so STOP does not wait for a model backlog. There can be one onboarding lease and one action lease for a sender at once. A future action handler must recheck current consent/grant and timezone before a model call and inside its final transaction, locking the user row consistently with onboarding. The existing `eligibleForProcessing` read is a preliminary check, not sufficient authorization for an eventual write. A STOP cannot undo an external request already issued.
 
@@ -29,7 +29,7 @@ On startup and each polling cycle, the worker recovers up to 100 expired leases.
 
 SIGINT/SIGTERM stops claims and cancels preparation. Even preparation that ignores cancellation cannot later apply its result through the runner. Live owned work is released for immediate retry; an expired/lost lease is left for recovery. Shutdown consumes the claimed attempt, so repeated shutdowns can exhaust a task. Short database effects finish or roll back before the pool closes; runtime queries have a five-second statement timeout. If the process is killed, its last lease expires and another process recovers it.
 
-This provides atomic database effects with retryable preparation. It does not make model calls or provider sends exactly once; persisted plans are implemented in M1-04, while usage reservations are implemented in M1-05; action receipts are implemented in M1-06, while external-send uncertainty handling remains later work.
+This provides atomic database effects with retryable preparation. It does not make model calls or provider sends exactly once; persisted plans are implemented in M1-04, while usage reservations are implemented in M1-05; action receipts are implemented in M1-06, while M1-07 durably holds uncertain sends without automatic retry. Audited reconciliation remains later work.
 
 ## Operating locally
 
@@ -38,7 +38,7 @@ npm run db:migrate
 npm run dev:worker
 ```
 
-`WORKER_POLL_INTERVAL_MS` controls the interval between cycles (default 30 seconds); each cycle claims up to 50 onboarding items. The worker logs recovery counts and backlog grouped by stage/status without message bodies. Pending action, execution and receipt counts are expected under the current modes. See [model plans](model-plans.md) for offline fixture planning.
+`WORKER_POLL_INTERVAL_MS` controls the interval between cycles (default 30 seconds); each cycle claims up to 50 receipt items and 50 onboarding items, then alternates planning/execution. The worker logs recovery counts and backlog grouped by stage/status without message bodies. Pending action counts are expected in disabled model mode; execution and receipt stages have active consumers. See [model plans](model-plans.md) for offline fixture planning.
 
 Inspect dead work using the worker database connection:
 

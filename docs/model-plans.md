@@ -6,7 +6,7 @@ M1-04 implements a provider-independent adapter, an OpenAI Responses transport, 
 
 The default `MODEL_MODE=disabled` preserves pending action work. Set `MODEL_MODE=fixture` to exercise plan persistence entirely offline:
 
-Stop existing workers before migration 0008 and restart them with this version. Older workers do not enforce the new spending gate and must not run alongside the updated planner.
+Stop existing workers before applying new migrations and restart them with this version. Older workers do not enforce the new spending gate and must not run alongside the updated planner.
 
 ```powershell
 npm run db:migrate
@@ -46,4 +46,4 @@ Plans have forced row security, a composite owner/event foreign key, tenant-scop
 
 Unit tests cover adapter request separation, schema/semantic validation, provenance, synchronous failures, timeout/cancellation, refusal/truncation, HTTP status handling, response bounds and disabled-by-default configuration. PostgreSQL tests use actual restricted ingress/worker/tenant logins for competing workers, atomic rollback, replay reuse, stable keys, invalid-output/timeout recovery, STOP/timezone races, expired reminders, stale leases, per-user ordering, immutable grants and tenant ownership.
 
-M1-05 usage reservations and the global spending stop are implemented locally. M1-06 transactional reminder/list actions and reply intents are implemented locally. Next is M1-07 test-number sending and receipt handling. Provider/model qualification and the replacement consent notice can be developed alongside those tasks. Live provider compatibility, measured cost, model accuracy and external delivery remain unverified.
+M1-05 usage reservations and the global spending stop are implemented locally. M1-06 transactional reminder/list actions and reply intents are implemented locally. M1-07 now provides tested send dispatch and active receipt handling; live activation remains gated. Next is M1-08 evaluation. See [WhatsApp delivery](whatsapp-delivery.md). Provider/model qualification and the replacement consent notice can be developed alongside those tasks. Live provider compatibility, measured cost, model accuracy and external delivery remain unverified.
