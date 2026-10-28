@@ -1,10 +1,15 @@
 import { readConfig } from '../src/config/env.js';
 import { createPool } from '../src/db/pool.js';
+import { assertRuntimeRole, runtimeDatabaseUrl } from '../src/db/runtime.js';
 import { PostgresIngressStore } from '../src/db/ingress-store.js';
 import { buildApp } from '../src/api/app.js';
 
 const config = readConfig();
-const pool = createPool(config.DATABASE_URL);
+const pool = createPool(runtimeDatabaseUrl('ingress'));
+await assertRuntimeRole(pool, 'ingress').catch(async (error: unknown) => {
+  await pool.end();
+  throw error;
+});
 const app = buildApp({ ...config, LOG_LEVEL: 'silent' }, new PostgresIngressStore(pool));
 try {
   const address = await app.listen({ host: '127.0.0.1', port: 0 });

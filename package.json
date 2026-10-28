@@ -21,6 +21,7 @@
     "format:check": "prettier --check .",
     "check": "npm run typecheck && npm test && npm run eval:validate && npm run build && npm run format:check",
     "db:migrate": "tsx scripts/migrate.ts",
+    "db:provision:local": "tsx scripts/provision-local-db.ts",
     "infra:up": "node scripts/docker.mjs compose up -d --wait",
     "infra:down": "node scripts/docker.mjs compose down",
     "infra:status": "node scripts/docker.mjs compose ps",

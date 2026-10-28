@@ -2,14 +2,23 @@ import 'dotenv/config';
 import { createInterface } from 'node:readline/promises';
 import { randomUUID } from 'node:crypto';
 import { createPool } from '../src/db/pool.js';
+import { assertRuntimeRole, runtimeDatabaseUrl } from '../src/db/runtime.js';
 import { PostgresIngressStore } from '../src/db/ingress-store.js';
 import { IdentityProcessor } from '../src/modules/identity/store.js';
 
 if (process.env.NODE_ENV === 'production')
   throw new Error('Local simulator cannot run in production');
-if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required');
-const pool = createPool(process.env.DATABASE_URL);
-const store = new PostgresIngressStore(pool);
+const ingressPool = createPool(runtimeDatabaseUrl('ingress'));
+const pool = createPool(runtimeDatabaseUrl('worker'));
+try {
+  await assertRuntimeRole(ingressPool, 'ingress');
+  await assertRuntimeRole(pool, 'worker');
+} catch (error) {
+  await ingressPool.end();
+  await pool.end();
+  throw error;
+}
+const store = new PostgresIngressStore(ingressPool);
 const processor = new IdentityProcessor(pool);
 const sender = `local-${randomUUID()}`;
 const terminal = createInterface({ input: process.stdin, output: process.stdout });
@@ -51,4 +60,5 @@ try {
 } finally {
   terminal.close();
   await pool.end();
+  await ingressPool.end();
 }

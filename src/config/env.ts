@@ -9,7 +9,8 @@ const schema = z.object({
   DATABASE_URL: z
     .string()
     .url()
-    .refine((v) => /^postgres(ql)?:/.test(v)),
+    .refine((v) => /^postgres(ql)?:/.test(v))
+    .optional(),
   WHATSAPP_APP_SECRET: z
     .string()
     .min(16)

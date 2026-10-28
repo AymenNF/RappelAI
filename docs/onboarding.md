@@ -7,6 +7,7 @@ Implemented: identity mapping, versioned local consent, timezone proposal/confir
 ```powershell
 npm run infra:up
 npm run db:migrate
+npm run db:provision:local
 npm run onboarding:chat
 ```
 
@@ -27,8 +28,8 @@ The simulator uses the same persistence and identity processor as the worker, bu
 - Onboarding-only messages complete their original work item; a normal message from an onboarded user remains pending for the future model consumer. Delivery-status events are left untouched.
 - Future consumers must recheck current consent and timezone, including grant timestamps. Old ready work cannot become eligible again after a new consent grant or timezone confirmation.
 
-Responses are stored in `identity_results.reply_text` and shown by the simulator. They are **not delivered on WhatsApp**. Sender integration and an outbound ledger are still M1/M2 work. Raw message retention/deletion and tenant runtime roles/RLS remain launch blockers; do not use real personal data yet.
+Responses are stored in `identity_results.reply_text` and shown by the simulator. They are **not delivered on WhatsApp**. Sender integration and an outbound ledger are still M1/M2 work. Tenant roles/RLS now protect the current schema; raw message retention/deletion, session authentication and production consent remain launch blockers. Do not use real personal data yet.
 
 ## Next work
 
-M1-02: scoped runtime roles, tenant transactions and RLS tests. M1-03: general work leases/recovery beyond the short onboarding transaction. Then attach the real model adapter, action services and outbound sender behind current consent and budget checks.
+M1-02 is implemented for the current schema; see [tenant isolation](tenant-isolation.md). M1-03 adds general work leases/recovery beyond the short onboarding transaction. Then attach the real model adapter, action services and outbound sender behind current consent and budget checks.

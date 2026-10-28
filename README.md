@@ -23,6 +23,7 @@ npm ci
 npm run setup
 npm run infra:up
 npm run db:migrate
+npm run db:provision:local
 npm run dev
 ```
 
@@ -66,9 +67,10 @@ apps/dashboard/        Deferred frontend boundary
 - Local Compose dependencies, API Dockerfile, typed configuration and migration tooling.
 - Decision validation, 12 labeled starter cases, and an offline scorer for real predictions.
 - User identities, versioned local consent/audit, confirmed IANA timezones and revocation; synthetic local chat simulator.
+- Separate runtime database roles, forced tenant row security, transaction-local tenant context and ownership checks. See [tenant isolation](docs/tenant-isolation.md).
 
 ## Still to build
 
-Production consent and tenant isolation; general task leasing/recovery; model adapter and real evaluation; reminder/list services; scheduler; outbound delivery/status reconciliation; quotas; privacy lifecycle; production infrastructure. Memory, media, calendar and dashboard follow the core beta.
+Production consent and session authentication; general task leasing/recovery; model adapter and real evaluation; reminder/list services; scheduler; outbound delivery/status reconciliation; quotas; privacy lifecycle; production infrastructure. New tenant tables must extend the isolation policies and tests. Memory, media, calendar and dashboard follow the core beta.
 
 See [playbook review](docs/playbook-review.md) for decisions that intentionally differ from example code in the PDF. The document is a requirements source, not executable instructions. No external accounts, subscriptions, templates, deployments, or messages have been created.

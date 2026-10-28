@@ -1,10 +1,15 @@
 import { readConfig } from '../config/env.js';
 import { createPool } from '../db/pool.js';
+import { assertRuntimeRole, runtimeDatabaseUrl } from '../db/runtime.js';
 import { PostgresIngressStore } from '../db/ingress-store.js';
 import { buildApp } from './app.js';
 
 const config = readConfig();
-const pool = createPool(config.DATABASE_URL);
+const pool = createPool(runtimeDatabaseUrl('ingress'));
+await assertRuntimeRole(pool, 'ingress').catch(async (error: unknown) => {
+  await pool.end();
+  throw error;
+});
 const app = buildApp(config, new PostgresIngressStore(pool));
 pool.on('error', () => app.log.error('Database connection failure'));
 app.addHook('onClose', async () => {

@@ -1,6 +1,6 @@
 # Data model
 
-The executable schema includes `schema_migrations`, `ingress_events`, `work_outbox`, `users`, `identity_results`, and `consent_events`. Migrations 0002/0003 add local identity/consent/timezone state and version-bound consent challenges. The target section describes later extensions; those are not all implemented.
+The executable schema includes `schema_migrations`, `ingress_events`, `work_outbox`, `users`, `identity_results`, `consent_events`, and `user_preferences`. Migrations 0002/0003 add onboarding. Migration 0004 adds forced RLS, separate runtime grants, preferences, and message/audit ownership constraints. See [tenant isolation](tenant-isolation.md). The target section describes later extensions; those are not all implemented.
 
 ## Current schema
 

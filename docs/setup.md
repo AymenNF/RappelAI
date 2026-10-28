@@ -20,15 +20,18 @@ npm run setup
 
 Setup creates `.env` once with random local webhook secrets and preserves existing files. These random values are for local signed fixtures. To receive actual Meta webhooks, replace `WHATSAPP_APP_SECRET` with the app's real secret and register `WHATSAPP_VERIFY_TOKEN` in Meta. Keep `.env` private; it is ignored by Git and excluded from the image.
 
-| Variable                   | Runtime use                                                         |
-| -------------------------- | ------------------------------------------------------------------- |
-| `DATABASE_URL`             | Required PostgreSQL connection                                      |
-| `WHATSAPP_APP_SECRET`      | Required raw-body HMAC verification                                 |
-| `WHATSAPP_VERIFY_TOKEN`    | Required GET challenge verification                                 |
-| `WHATSAPP_PHONE_NUMBER_ID` | Optional allowlist for a business phone; set before public exposure |
-| `HOST`, `PORT`             | Bind address and port; local default is loopback                    |
-| `LOG_LEVEL`                | Structured API logging                                              |
-| `WORKER_POLL_INTERVAL_MS`  | Diagnostic backlog poll; not a scheduler                            |
+| Variable                   | Runtime use                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------- |
+| `DATABASE_URL`             | Migration/bootstrap administrator only; not used by runtime processes           |
+| `INGRESS_DATABASE_URL`     | Restricted webhook API login; populated by local provisioning                   |
+| `WORKER_DATABASE_URL`      | Restricted trusted onboarding worker login                                      |
+| `TENANT_DATABASE_URL`      | Tenant-scoped application login; never use worker credentials for user requests |
+| `WHATSAPP_APP_SECRET`      | Required raw-body HMAC verification                                             |
+| `WHATSAPP_VERIFY_TOKEN`    | Required GET challenge verification                                             |
+| `WHATSAPP_PHONE_NUMBER_ID` | Optional allowlist for a business phone; set before public exposure             |
+| `HOST`, `PORT`             | Bind address and port; local default is loopback                                |
+| `LOG_LEVEL`                | Structured API logging                                                          |
+| `WORKER_POLL_INTERVAL_MS`  | Diagnostic backlog poll; not a scheduler                                        |
 
 Other `.env.example` fields are reserved for future integrations. Model IDs and Graph API version are deliberately unfilled until selected and verified.
 
@@ -37,9 +40,10 @@ Other `.env.example` fields are reserved for future integrations. Model IDs and 
 ```powershell
 npm run infra:up
 npm run db:migrate
+npm run db:provision:local
 ```
 
-Compose binds PostgreSQL to localhost, persists it in a named volume and checks readiness. The local password is deliberately public and is unsuitable for any shared environment. Migration files are checksummed and applied transactionally under an advisory lock. Never edit an applied migration; add a new file.
+Compose binds PostgreSQL to localhost, persists it in a named volume and checks readiness. Its administrator password is deliberately public and unsuitable for shared environments. Local provisioning creates separate non-owner runtime logins with random passwords in ignored `.env`; reruns preserve generated credentials. The API and worker refuse administrator credentials. See [tenant isolation](tenant-isolation.md). Migration files are checksummed and applied transactionally under an advisory lock. Never edit an applied migration; add a new file.
 
 Redis is optional and unused in this foundation. When implementing the relay:
 
@@ -89,7 +93,7 @@ The API image builds with `docker build -t memorae-api .`; the worker uses the s
 | ------------------------------- | ------------------------------------------------------------------------------------ |
 | Docker not recognized           | Install/start Docker Desktop; open a new terminal; verify `docker compose version`   |
 | Readiness 503                   | Verify PostgreSQL is healthy, URL is correct and migrations ran                      |
-| Port 5432 busy                  | Choose another host port and update `DATABASE_URL` together                          |
+| Port 5432 busy                  | Choose another host port and update administrator and runtime URLs together          |
 | Webhook 401                     | Sign exact request bytes with the real app secret; do not stringify parsed JSON      |
 | Webhook 400                     | Verify Meta envelope and phone metadata; inspect a redacted fixture locally          |
 | Webhook 503                     | Database write failed; allow provider retry; do not force a 200                      |

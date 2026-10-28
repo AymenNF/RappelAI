@@ -1,13 +1,18 @@
 import { setTimeout } from 'node:timers/promises';
 import { readConfig } from '../config/env.js';
 import { createPool } from '../db/pool.js';
+import { assertRuntimeRole, runtimeDatabaseUrl } from '../db/runtime.js';
 import { IdentityProcessor } from '../modules/identity/store.js';
 
 // Local onboarding only; model and delivery tasks remain durable and unconsumed.
 const config = readConfig();
 if (config.NODE_ENV === 'production')
   throw new Error('Local onboarding notice must be replaced before production use');
-const pool = createPool(config.DATABASE_URL);
+const pool = createPool(runtimeDatabaseUrl('worker'));
+await assertRuntimeRole(pool, 'worker').catch(async (error: unknown) => {
+  await pool.end();
+  throw error;
+});
 const identity = new IdentityProcessor(pool);
 const controller = new AbortController();
 let stopping = false;
