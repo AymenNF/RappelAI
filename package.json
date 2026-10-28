@@ -1,0 +1,42 @@
+{
+  "name": "memorae",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "WhatsApp personal assistant — foundation and system design",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev": "tsx watch src/api/main.ts",
+    "dev:worker": "tsx watch src/worker/main.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/api/main.js",
+    "start:worker": "node dist/worker/main.js",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/unit/*.test.ts",
+    "test:integration": "tsx --test tests/integration/*.test.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run typecheck && npm test && npm run eval:validate && npm run build && npm run format:check",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "infra:up": "docker compose up -d --wait",
+    "infra:down": "docker compose down",
+    "eval:validate": "tsx evals/validate.ts",
+    "eval": "tsx evals/score.ts"
+  },
+  "dependencies": {
+    "dotenv": "16.6.1",
+    "fastify": "5.12.7",
+    "pg": "8.23.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@types/pg": "8.23.1",
+    "prettier": "3.9.10",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,28 @@
+name: Work item
+description: A small, verifiable implementation slice
+body:
+  - type: input
+    id: backlog
+    attributes:
+      label: Backlog ID / milestone
+      placeholder: M1-01 / Text vertical slice
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: What should a user or operator be able to do?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Observable behavior, failure cases, and how to verify them.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and exclusions

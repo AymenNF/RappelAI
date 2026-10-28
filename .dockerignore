@@ -1,0 +1,8 @@
+node_modules
+.npm-cache
+dist
+.git
+.env
+.env.*
+coverage
+evals/results
