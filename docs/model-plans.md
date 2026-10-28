@@ -6,7 +6,7 @@ M1-04 implements a provider-independent adapter, an OpenAI Responses transport, 
 
 The default `MODEL_MODE=disabled` preserves pending action work. Set `MODEL_MODE=fixture` to exercise plan persistence entirely offline:
 
-Stop existing workers before migration 0007 and restart them with this version. Older workers do not enforce the new spending gate and must not run alongside the updated planner.
+Stop existing workers before migration 0008 and restart them with this version. Older workers do not enforce the new spending gate and must not run alongside the updated planner.
 
 ```powershell
 npm run db:migrate
@@ -16,7 +16,7 @@ $env:MODEL_MODE = 'fixture'
 npm run dev:worker
 ```
 
-The fixture always returns `clarify` with no calls, labeled `fixture / fixed-clarify-v1`; it does not understand the message. Use synthetic inputs. It saves a plan for the first ready message per user and leaves it in `execution`. Later messages from that user wait for execution; onboarding, including STOP, continues. No reminder, list item or reply is created. Stop the worker and remove the shell override with `Remove-Item Env:MODEL_MODE` to restore the default.
+The fixture always returns `clarify` with no calls, labeled `fixture / fixed-clarify-v1`; it does not understand the message. Use synthetic inputs. It saves a clarification plan; the M1-06 executor creates a pending clarification reply intent and completes work. No reminder or list item is created by this fixed fixture, and no reply is sent. Later messages then proceed in order; onboarding, including STOP, continues. Stop the worker and remove the shell override with `Remove-Item Env:MODEL_MODE` to restore the default.
 
 The OpenAI transport takes an explicit API key and model ID through its constructor. It is tested with an injected HTTP transport, but is not selectable from worker configuration yet. The current consent notice explicitly says no provider calls; M1-05 now supplies reservations and a kill switch. Enabling real-user calls still requires the replacement notice, qualified model/rates/token ceilings and real evaluations. Secrets are not read or transmitted by fixture mode. The old reserved `MODEL_API_KEY` and model fields remain unused by the worker.
 
@@ -38,12 +38,12 @@ Planning checks the live lease and current onboarding eligibility before a provi
 
 Runtime roles cannot update or delete plans. Replayed planning reuses an existing plan rather than calling the provider again, even if configuration or output has changed. Invalid or obsolete plans require an explicit future migration/reconciliation path, never silent regeneration. A crash **before** persistence may require another provider call; uncertain usage is held and must be reconciled before retrying. Only persisted decisions are stable. An expired reminder in a saved plan remains unchanged and must be rejected or clarified by the future executor.
 
-`actionKey(plan, index)` derives a stable SHA-256 key from event ID, plan version, action index and tool kind. M1-06 will use those keys for transactional action receipts, entity changes and reply intents. The execution stage currently has no consumer. Earlier pending, leased or dead execution work blocks later planning/execution for that user; other users proceed independently.
+`actionKey(plan, index)` derives a stable SHA-256 key from event ID, plan version, action index and tool kind. M1-06 now uses those keys for transactional action receipts, entity changes and reply intents. The execution stage consumes supported saved plans; replies remain unsent. See [action execution](action-execution.md). Earlier pending, leased or dead execution work blocks later planning/execution for that user; other users proceed independently.
 
-Plans have forced row security, a composite owner/event foreign key, tenant-scoped SELECT and explicit worker SELECT/INSERT grants. Ingress cannot access them. Future execution must recheck current eligibility under the user lock; reading a saved plan is not authorization to execute it.
+Plans have forced row security, a composite owner/event foreign key, tenant-scoped SELECT and explicit worker SELECT/INSERT grants. Ingress cannot access them. Execution rechecks current eligibility under the user lock; reading a saved plan alone is not authorization to execute it.
 
 ## Tests and next work
 
 Unit tests cover adapter request separation, schema/semantic validation, provenance, synchronous failures, timeout/cancellation, refusal/truncation, HTTP status handling, response bounds and disabled-by-default configuration. PostgreSQL tests use actual restricted ingress/worker/tenant logins for competing workers, atomic rollback, replay reuse, stable keys, invalid-output/timeout recovery, STOP/timezone races, expired reminders, stale leases, per-user ordering, immutable grants and tenant ownership.
 
-M1-05 usage reservations and the global spending stop are implemented locally. Next is M1-06 transactional reminder/list actions and replies. Provider/model qualification and the replacement consent notice can be developed alongside those tasks. Live provider compatibility, measured cost, model accuracy and external delivery remain unverified.
+M1-05 usage reservations and the global spending stop are implemented locally. M1-06 transactional reminder/list actions and reply intents are implemented locally. Next is M1-07 test-number sending and receipt handling. Provider/model qualification and the replacement consent notice can be developed alongside those tasks. Live provider compatibility, measured cost, model accuracy and external delivery remain unverified.

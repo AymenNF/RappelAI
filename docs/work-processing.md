@@ -12,12 +12,12 @@ There are four stages (migration 0006 adds execution):
 | ------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
 | `onboarding` | Identity, consent, timezone and STOP; handled/blocked items complete                 | Earliest incomplete onboarding item per sender                                 |
 | `action`     | Ready identities transition here; optional fixture planner persists a validated plan | Earlier incomplete onboarding, action or execution items block later planning  |
-| `execution`  | Immutable plan awaits M1-06 action/reply processing                                  | Earlier incomplete onboarding, action or execution items block later execution |
+| `execution`  | Consumes immutable plan; commits entities, receipts and unsent reply intent          | Earlier incomplete onboarding, action or execution items block later execution |
 | `receipt`    | Stored durably; reconciliation handler not enabled yet                               | Provider message order within a business phone                                 |
 
 Onboarding can advance past pending actions so STOP does not wait for a model backlog. There can be one onboarding lease and one action lease for a sender at once. A future action handler must recheck current consent/grant and timezone before a model call and inside its final transaction, locking the user row consistently with onboarding. The existing `eligibleForProcessing` read is a preliminary check, not sufficient authorization for an eventual write. A STOP cannot undo an external request already issued.
 
-Pending backoff, active leases and dead work block later items in the same stage. A dead onboarding item also blocks later actions. Other senders/business phones remain independent. There is no automatic skip of dead work; an operator must repair and retry it. This also means a dead onboarding item can delay a later STOP; inspect dead onboarding work promptly. The action stage now supports fixture planning; execution is not enabled.
+Pending backoff, active leases and dead work block later items in the same stage. A dead onboarding item also blocks later actions. Other senders/business phones remain independent. There is no automatic skip of dead work; an operator must repair and retry it. This also means a dead onboarding item can delay a later STOP; inspect dead onboarding work promptly. The action stage now supports fixture planning; local execution is enabled; sending is not.
 
 ## Lease lifecycle
 
@@ -29,7 +29,7 @@ On startup and each polling cycle, the worker recovers up to 100 expired leases.
 
 SIGINT/SIGTERM stops claims and cancels preparation. Even preparation that ignores cancellation cannot later apply its result through the runner. Live owned work is released for immediate retry; an expired/lost lease is left for recovery. Shutdown consumes the claimed attempt, so repeated shutdowns can exhaust a task. Short database effects finish or roll back before the pool closes; runtime queries have a five-second statement timeout. If the process is killed, its last lease expires and another process recovers it.
 
-This provides atomic database effects with retryable preparation. It does not make model calls or provider sends exactly once; persisted plans are implemented in M1-04, while usage reservations are implemented in M1-05; action receipts and external-send uncertainty handling remain later milestones.
+This provides atomic database effects with retryable preparation. It does not make model calls or provider sends exactly once; persisted plans are implemented in M1-04, while usage reservations are implemented in M1-05; action receipts are implemented in M1-06, while external-send uncertainty handling remains later work.
 
 ## Operating locally
 
@@ -60,3 +60,5 @@ This resets attempts, preserves ordering and records the label. The label is an 
 Real PostgreSQL tests use non-owner ingress/worker logins and disposable schemas. They cover simultaneous claims, independent users/business phones, ordered batches, abandoned lease recovery, stale-token fencing, atomic rollback, retry exhaustion, audited operator retry, stage separation, heartbeat extension, lease loss, cancellation-ignoring preparation, permanent failures and ingress transaction visibility. Identity tests additionally verify that STOP invalidates earlier ready work and old work cannot revive under a new consent grant. These are local correctness checks, not production load or external-delivery tests.
 
 M1-05 adds metered model dispatch. Budget/kill/rate/uncertainty denials defer the work by 60 seconds without consuming its claim attempt. Unknown provider usage retains its reservation until reconciliation. The worker runs usage recovery alongside lease recovery. See [usage controls](usage-controls.md).
+
+M1-06 consumes execution work in both model modes, including while paid planning is paused. Each worker cycle alternates planning and execution to allow later messages to advance after earlier commits. A completed execution means database effects and a reply intent were committed, not that a reply or reminder was delivered. See [action execution](action-execution.md).

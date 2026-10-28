@@ -1,6 +1,6 @@
 # Architecture and system design
 
-Status: target system with implemented ingress, identity, tenant isolation, work leases, persisted plans and usage controls. Updated 2026-10-27. Assumptions: solo developer, small private beta, WhatsApp first, TypeScript, one region, managed PostgreSQL at launch. Country, hosting, languages and provider choices remain open in [decisions](decisions/README.md).
+Status: target system with implemented ingress, identity, tenant isolation, work leases, persisted plans, usage controls and local action execution. Updated 2026-10-27. Assumptions: solo developer, small private beta, WhatsApp first, TypeScript, one region, managed PostgreSQL at launch. Country, hosting, languages and provider choices remain open in [decisions](decisions/README.md).
 
 ## Shape and boundaries
 
@@ -26,7 +26,7 @@ flowchart LR
   AUTH --> S
 ```
 
-The API-to-inbox/outbox path, local identity/onboarding, tenant isolation, staged leased worker, model adapter and immutable plans exist today. Onboarding responses are stored without sending them. Redis is provisionable but unused. Live model activation, action execution, scheduler, sender, authenticated API and dashboard remain planned. See [onboarding](onboarding.md) and [work processing](work-processing.md).
+The API-to-inbox/outbox path, local identity/onboarding, tenant isolation, staged leased worker, model adapter and immutable plans exist today. Onboarding responses are stored without sending them. Redis is provisionable but unused. Local action execution and reply intents are implemented. Live model activation, scheduler, sender, authenticated API and dashboard remain planned. See [onboarding](onboarding.md) and [work processing](work-processing.md).
 
 | Module     | Owns                                                        | Must not own                                  |
 | ---------- | ----------------------------------------------------------- | --------------------------------------------- |
@@ -75,7 +75,7 @@ The acceptance contract is committed ingress order established by stream-lock ac
 
 The M1-04 planner persists validated decisions and transitions work to a separate execution stage in one fenced transaction. It rechecks consent and timezone under the user row lock. The OpenAI transport is implemented but disabled in the worker; optional fixture mode exercises persistence offline. See [model plans](model-plans.md).
 
-The remaining executor must use the validated model plan saved before execution. On retry, reuse it; do not regenerate a potentially different list of actions. Derive action keys from inbound event ID + plan version + action index + kind. Within one transaction, insert the action receipt, apply entity changes, and enqueue reply intent. An existing receipt returns the original result. User identity comes from server context. All references must resolve within the user scope. Model-provided confidence is a routing signal, not authorization or calibrated truth.
+The M1-06 executor uses the validated model plan saved before execution. On retry, reuse it; do not regenerate a potentially different list of actions. Derive action keys from inbound event ID + plan version + action index + kind. M1-06 commits action receipts, entity changes, execution outcome, reply intent and work acknowledgement together. See [action execution](action-execution.md). An existing receipt returns the original result. User identity comes from server context. All references must resolve within the user scope. Model-provided confidence is a routing signal, not authorization or calibrated truth.
 
 ## Scheduling and delivery (M2)
 

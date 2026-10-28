@@ -10,8 +10,9 @@ import { ModelAdapter } from '../modules/processing/model.js';
 import { PlanProcessor } from '../modules/processing/plans.js';
 import { fixtureTransport } from '../modules/processing/fixture.js';
 import { UsageService } from '../modules/usage/service.js';
+import { ExecutionProcessor } from '../modules/processing/execution.js';
 
-// Local onboarding and opt-in offline plan generation; no paid calls or execution.
+// Local onboarding, optional offline planning and transactional execution; no provider sends.
 const config = readConfig();
 if (config.NODE_ENV === 'production')
   throw new Error('Local onboarding notice must be replaced before production use');
@@ -24,6 +25,7 @@ const identity = new IdentityProcessor(pool);
 const queue = new WorkQueue(pool);
 const runner = new WorkRunner(queue, `worker-${randomUUID()}`);
 const usage = new UsageService(pool);
+const execution = new ExecutionProcessor();
 const planner =
   config.MODEL_MODE === 'fixture'
     ? new PlanProcessor(pool, new ModelAdapter(fixtureTransport, config.MODEL_TIMEOUT_MS))
@@ -45,6 +47,7 @@ console.log(
     onboardingEnabled: true,
     modelMode: config.MODEL_MODE,
     remoteModelEnabled: false,
+    executionEnabled: true,
   }),
 );
 try {
@@ -66,10 +69,10 @@ try {
         );
         if (!processed) break;
       }
-      if (planner) {
-        for (let i = 0; i < 50 && !stopping; i++) {
-          if (!(await runner.runOne('action', planner, controller.signal))) break;
-        }
+      for (let i = 0; i < 50 && !stopping; i++) {
+        const planned = planner ? await runner.runOne('action', planner, controller.signal) : false;
+        const executed = await runner.runOne('execution', execution, controller.signal);
+        if (!planned && !executed) break;
       }
       const result = await pool.query(
         "SELECT stage,status,count(*)::int AS count FROM work_outbox WHERE status <> 'completed' GROUP BY stage,status",

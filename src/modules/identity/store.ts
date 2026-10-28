@@ -113,6 +113,13 @@ export class IdentityProcessor {
         VALUES($1,$2,$3,$4,$5)`,
         [user.id, event.id, transition.consentAction, CONSENT_VERSION, CONSENT_NOTICE],
       );
+    // A later STOP or settings change must suppress an already queued plan reply.
+    await client.query(
+      `UPDATE reply_intents SET status='suppressed' WHERE user_id=$1 AND status='pending'
+      AND ($2::boolean OR consent_grant_at IS DISTINCT FROM $3::timestamptz
+        OR timezone_confirmed_at IS DISTINCT FROM $4::timestamptz)`,
+      [user.id, !hasOnboarded(s), s.consent_at, s.timezone_confirmed_at],
+    );
     return {
       nextStage: transition.disposition === 'ready' ? 'action' : null,
       disposition: transition.disposition,

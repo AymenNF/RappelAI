@@ -1,6 +1,6 @@
 # ADR 0002: database-backed work and persisted plans
 
-Status: accepted, 2026-10-27. Inbox/outbox, leased PostgreSQL consumer and immutable plans implemented; optional relay and action receipts planned.
+Status: accepted, 2026-10-27. Inbox/outbox, leased PostgreSQL consumer and immutable plans implemented; action receipts and reply intents implemented; optional relay planned.
 
 Context: database insert followed by queue publish is a dual write. Queue retries and model nondeterminism can duplicate or alter actions.
 
@@ -12,4 +12,4 @@ Consequences: outbox and lease recovery add code and tests. Internal effects bec
 
 M1-03 implementation: use PostgreSQL directly without Redis until measurements justify a buffer. Per-stream ingress transaction locks establish committed sequence order; staged ordered claims plus expiring ownership tokens serialize consumers. Onboarding advances past action backlog for consent controls. See [work processing](../work-processing.md) for the exact ordering and recovery contract.
 
-M1-04 adds an atomic planning-to-execution transition with immutable tenant-scoped plans. Runtime replay reuses saved decisions; a pre-persistence crash can still repeat a provider call. The executor and usage reservations are separate milestones. See [model plans](../model-plans.md).
+M1-04 adds an atomic planning-to-execution transition with immutable tenant-scoped plans. Runtime replay reuses saved decisions; a pre-persistence crash can still repeat a provider call. The executor (M1-06) and usage reservations (M1-05) are now implemented as separate transaction boundaries. See [model plans](../model-plans.md).
