@@ -1,6 +1,6 @@
 # ADR 0002: database-backed work and persisted plans
 
-Status: accepted, 2026-10-27. Inbox/outbox implemented; relay, consumer, plans and receipts planned.
+Status: accepted, 2026-10-27. Inbox/outbox and leased PostgreSQL consumer implemented; optional relay, plans and action receipts planned.
 
 Context: database insert followed by queue publish is a dual write. Queue retries and model nondeterminism can duplicate or alter actions.
 
@@ -9,3 +9,5 @@ Decision: persist ingress event and work intent in the same transaction. Queue p
 Alternatives: Redis-only scheduling loses the authoritative commitment on data loss; a unique queue job ID cannot substitute for database correctness; regenerating an action plan on every retry makes positional idempotency keys unstable.
 
 Consequences: outbox and lease recovery add code and tests. Internal effects become replay-safe. External calls still require separate uncertainty handling. Never mark a durable task complete merely because it was published to a queue.
+
+M1-03 implementation: use PostgreSQL directly without Redis until measurements justify a buffer. Per-stream ingress transaction locks establish committed sequence order; staged ordered claims plus expiring ownership tokens serialize consumers. Onboarding advances past action backlog for consent controls. See [work processing](../work-processing.md) for the exact ordering and recovery contract.

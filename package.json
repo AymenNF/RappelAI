@@ -27,6 +27,7 @@
     "infra:status": "node scripts/docker.mjs compose ps",
     "onboarding:chat": "tsx scripts/onboarding-chat.ts",
     "smoke": "tsx scripts/local-smoke.ts",
+    "work:retry": "tsx scripts/work-retry.ts",
     "eval:validate": "tsx evals/validate.ts",
     "eval": "tsx evals/score.ts"
   },

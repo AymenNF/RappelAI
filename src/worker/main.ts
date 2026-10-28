@@ -1,8 +1,11 @@
 import { setTimeout } from 'node:timers/promises';
+import { randomUUID } from 'node:crypto';
 import { readConfig } from '../config/env.js';
 import { createPool } from '../db/pool.js';
 import { assertRuntimeRole, runtimeDatabaseUrl } from '../db/runtime.js';
 import { IdentityProcessor } from '../modules/identity/store.js';
+import { WorkQueue } from '../modules/processing/leases.js';
+import { WorkRunner } from '../modules/processing/runner.js';
 
 // Local onboarding only; model and delivery tasks remain durable and unconsumed.
 const config = readConfig();
@@ -14,6 +17,8 @@ await assertRuntimeRole(pool, 'worker').catch(async (error: unknown) => {
   throw error;
 });
 const identity = new IdentityProcessor(pool);
+const queue = new WorkQueue(pool);
+const runner = new WorkRunner(queue, `worker-${randomUUID()}`);
 const controller = new AbortController();
 let stopping = false;
 pool.on('error', () =>
@@ -31,23 +36,31 @@ console.log(
 try {
   while (!stopping) {
     try {
+      const recovered = await queue.recoverExpired();
+      if (recovered) console.log(JSON.stringify({ event: 'work_recovered', count: recovered }));
       for (let i = 0; i < 50 && !stopping; i++) {
-        const processed = await identity.processNext();
+        const processed = await runner.runOne(
+          'onboarding',
+          {
+            prepare: async () => null,
+            apply: (client, lease) => identity.apply(client, lease.event_id),
+          },
+          controller.signal,
+        );
         if (!processed) break;
-        console.log(JSON.stringify({ event: 'onboarding_processed', ...processed }));
       }
       const result = await pool.query(
-        "SELECT count(*)::int AS pending FROM work_outbox WHERE status <> 'completed'",
+        "SELECT stage,status,count(*)::int AS count FROM work_outbox WHERE status <> 'completed' GROUP BY stage,status",
       );
       console.log(
         JSON.stringify({
           event: 'work_backlog',
-          pending: result.rows[0].pending,
+          counts: result.rows,
           modelEnabled: false,
         }),
       );
     } catch {
-      console.error(JSON.stringify({ level: 'error', event: 'backlog_query_failed' }));
+      console.error(JSON.stringify({ level: 'error', event: 'work_cycle_failed' }));
     }
     try {
       await setTimeout(config.WORKER_POLL_INTERVAL_MS, undefined, { signal: controller.signal });

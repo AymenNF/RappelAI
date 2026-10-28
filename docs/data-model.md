@@ -1,14 +1,14 @@
 # Data model
 
-The executable schema includes `schema_migrations`, `ingress_events`, `work_outbox`, `users`, `identity_results`, `consent_events`, and `user_preferences`. Migrations 0002/0003 add onboarding. Migration 0004 adds forced RLS, separate runtime grants, preferences, and message/audit ownership constraints. See [tenant isolation](tenant-isolation.md). The target section describes later extensions; those are not all implemented.
+The executable schema includes `schema_migrations`, `ingress_events`, `work_outbox`, `users`, `identity_results`, `consent_events`, `user_preferences`, and `work_recovery_events`. Migrations 0002/0003 add onboarding. Migration 0004 adds forced RLS, separate runtime grants, preferences, and message/audit ownership constraints. Migration 0005 adds staged renewable work leases, attempt limits and recovery audit. See [tenant isolation](tenant-isolation.md) and [work processing](work-processing.md). The target section describes later extensions; those are not all implemented.
 
 ## Current schema
 
-| Table               | Purpose                                                  | Key invariants                                                                      |
-| ------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `schema_migrations` | Applied migration history                                | Unique filename; SHA-256 checksum; advisory migration lock                          |
-| `ingress_events`    | Normalized inbound messages and delivery status payloads | Unique event key, monotonic identity sequence, received/processed times             |
-| `work_outbox`       | Durable pending work                                     | One task per ingress event; lease token + expiry required together for leased state |
+| Table               | Purpose                                                  | Key invariants                                                                           |
+| ------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `schema_migrations` | Applied migration history                                | Unique filename; SHA-256 checksum; advisory migration lock                               |
+| `ingress_events`    | Normalized inbound messages and delivery status payloads | Unique event key, monotonic identity sequence, received/processed times                  |
+| `work_outbox`       | Durable pending work                                     | One task per ingress event; stage, attempts and lease token + owner + expiry constraints |
 
 Event and work row are inserted in one transaction. Receipt events have no sender because their user is resolved later through outbound correlation. Payloads are private staging data; do not expose a generic read endpoint.
 

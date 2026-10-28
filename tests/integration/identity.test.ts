@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { migrateTestSchema } from '../helpers/database.js';
 import { randomUUID } from 'node:crypto';
 import pg from 'pg';
 import { PostgresIngressStore } from '../../src/db/ingress-store.js';
@@ -16,15 +16,7 @@ test('identity: isolated senders, ordered concurrent workers, replay, revocation
   });
   try {
     await admin.query(`CREATE SCHEMA ${schema}`);
-    for (const file of [
-      '0001_ingress.sql',
-      '0002_identity.sql',
-      '0003_consent_offer_version.sql',
-    ]) {
-      await pool.query(
-        await readFile(new URL(`../../migrations/${file}`, import.meta.url), 'utf8'),
-      );
-    }
+    await migrateTestSchema(pool);
     const store = new PostgresIngressStore(pool);
     const processor = new IdentityProcessor(pool);
     const user = async (sender = 'alice') =>

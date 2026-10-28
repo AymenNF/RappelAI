@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { migrateTestSchema } from '../helpers/database.js';
 import pg from 'pg';
 import { withTenant } from '../../src/db/tenant.js';
 import { assertRuntimeRole } from '../../src/db/runtime.js';
@@ -41,16 +41,7 @@ test('real non-owner logins enforce tenant RLS, grants, FKs and pool cleanup', a
   };
   try {
     await admin.query(`CREATE SCHEMA ${schema}`);
-    for (const name of [
-      '0001_ingress.sql',
-      '0002_identity.sql',
-      '0003_consent_offer_version.sql',
-      '0004_tenant_isolation.sql',
-    ]) {
-      await admin.query(
-        await readFile(new URL(`../../migrations/${name}`, import.meta.url), 'utf8'),
-      );
-    }
+    await migrateTestSchema(admin);
     const ingress = await makeLogin('ingress');
     const worker = await makeLogin('worker');
     const tenant = await makeLogin('tenant');

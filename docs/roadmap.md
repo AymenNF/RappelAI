@@ -39,7 +39,7 @@ Estimate: 1–3 days total. Goal: reproducible setup and agreed architecture.
 
 Completed in this scaffold: source boundaries, TypeScript API/worker, signed ingress, transactional inbox/outbox, migration runner, local infra config, CI definition, unit/integration tests, draft contracts/prompt, 12 evaluation fixtures and offline scoring, system design and backlog.
 
-Local Compose, migration re-run, PostgreSQL integration tests, API readiness and Docker image build are now verified. The repository has an initial commit and remote. Choose the issue tracker and review open decisions. M1 identity/consent/timezone handling now works locally; real AI evaluation, general work consumption and outbound sending are not complete. See [onboarding](onboarding.md).
+Local Compose, migration re-run, PostgreSQL integration tests, API readiness and Docker image build are now verified. The repository has an initial commit and remote. Choose the issue tracker and review open decisions. M1 identity/consent/timezone handling now works locally; work leasing/recovery and ordered onboarding are implemented; real AI evaluation, action handling and outbound sending are not complete. See [onboarding](onboarding.md).
 
 **Exit demo:** signed fixture persists once under replay; unsigned data is rejected; simulated storage outage gets 503; database returns to ready after recovery. Save evidence in the work item.
 
@@ -54,6 +54,8 @@ Build in dependency order:
 5. One-time reminder creation and list addition with action receipts; reply intent committed with the action.
 6. WhatsApp send adapter on the test number and status ingestion; initially test-number traffic only.
 7. Expand to 60 reviewed eval cases and generate real predictions before optimizing prompts.
+
+M1-01 through M1-03 are complete locally: identity/consent/timezone, tenant isolation, and leased ordered onboarding with recovery tests. Next is M1-04, the model adapter and persisted validated plan. See [work processing](work-processing.md) for the stage and late-arrival contract.
 
 **Exit demo:** “Remind me tomorrow at 5pm” produces a correctly scoped row and a truthful confirmation. A replay and worker retry produce one entity. “Add milk to grocery” adds one item. An unclear date asks for clarification. A model timeout does not lose or duplicate work. Non-consenting users never reach the model. Real evaluation results are recorded with model/prompt versions.
 

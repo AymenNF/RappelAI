@@ -24,26 +24,39 @@ export class PostgresIngressStore implements IngressStore {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
+      // Serialize insertion/commit per provider stream BEFORE allocating identity sequence values.
+      // Sorting multi-stream batches prevents opposing lock acquisition order.
+      const streams = [
+        ...new Set(
+          events.map((e) =>
+            JSON.stringify([e.phoneNumberId, e.kind, e.senderId ?? e.providerMessageId]),
+          ),
+        ),
+      ].sort();
+      for (const stream of streams) {
+        await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [stream]);
+      }
       // One statement for the batch; the inbox and durable work intent commit together.
       const result = await client.query(
         `
         WITH incoming AS (
           SELECT * FROM jsonb_to_recordset($1::jsonb) AS e(
             event_key text, kind text, phone_number_id text,
-            provider_message_id text, sender_id text, payload jsonb
+            provider_message_id text, sender_id text, payload jsonb, batch_position integer
           )
         ), inserted AS (
           INSERT INTO ingress_events
             (event_key, kind, phone_number_id, provider_message_id, sender_id, payload)
           SELECT event_key, kind, phone_number_id, provider_message_id, sender_id, payload
-          FROM incoming ON CONFLICT (event_key) DO NOTHING RETURNING id, kind
+          FROM incoming ORDER BY batch_position ON CONFLICT (event_key) DO NOTHING RETURNING id, kind
         )
-        INSERT INTO work_outbox (event_id, topic)
-        SELECT id, kind FROM inserted RETURNING id
+        INSERT INTO work_outbox (event_id, topic, stage)
+        SELECT id, kind, CASE WHEN kind='delivery.status' THEN 'receipt' ELSE 'onboarding' END FROM inserted RETURNING id
       `,
         [
           JSON.stringify(
-            events.map((e) => ({
+            events.map((e, index) => ({
+              batch_position: index,
               event_key: e.eventKey,
               kind: e.kind,
               phone_number_id: e.phoneNumberId,

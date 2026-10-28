@@ -10,6 +10,10 @@ Release order: checks → migration compatibility review → database backup ver
 
 Rollback: stop new spending if needed; roll back compatible application image; preserve inbox/outbox and ledger. For data changes, use a reviewed corrective migration or restore drill procedure, not ad hoc deletion. Never replay all outbound messages indiscriminately after restore: reconcile accepted/delivered/unknown attempts first.
 
+## Local work recovery
+
+M1-03 now recovers expired leases on each worker cycle, caps retries and preserves per-user order. Inspect dead work, repair its cause and use `npm run work:retry -- <dead-work-uuid> <operator-label>`. See the [work processing runbook](work-processing.md) for the full contract and known limits. Production alerts and external-send reconciliation below remain planned.
+
 ## Signals and initial alert proposals
 
 | Signal                               | Initial target / trigger                                         | Response                                                        |

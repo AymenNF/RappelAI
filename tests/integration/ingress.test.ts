@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { migrateTestSchema } from '../helpers/database.js';
 import { randomUUID } from 'node:crypto';
 import pg from 'pg';
 import { PostgresIngressStore } from '../../src/db/ingress-store.js';
@@ -18,9 +18,7 @@ test('real PostgreSQL: atomic inbox/outbox, concurrent replay, rollback, readine
   });
   try {
     await admin.query(`CREATE SCHEMA ${schema}`);
-    await pool.query(
-      await readFile(new URL('../../migrations/0001_ingress.sql', import.meta.url), 'utf8'),
-    );
+    await migrateTestSchema(pool);
     const store = new PostgresIngressStore(pool);
     assert.equal(await store.ready(), true);
     const event: IngressEvent = {

@@ -1,6 +1,6 @@
 # Architecture and system design
 
-Status: proposed system with implemented ingress foundation. Updated 2026-10-27. Assumptions: solo developer, small private beta, WhatsApp first, TypeScript, one region, managed PostgreSQL at launch. Country, hosting, languages and provider choices remain open in [decisions](decisions/README.md).
+Status: target system with implemented ingress, identity, tenant isolation and work leases. Updated 2026-10-27. Assumptions: solo developer, small private beta, WhatsApp first, TypeScript, one region, managed PostgreSQL at launch. Country, hosting, languages and provider choices remain open in [decisions](decisions/README.md).
 
 ## Shape and boundaries
 
@@ -11,9 +11,9 @@ flowchart LR
   U[User on WhatsApp] --> M[Meta Cloud API]
   M --> A[API: verify and normalize]
   A --> DB[(PostgreSQL: inbox + outbox)]
-  DB --> R[Durable work relay]
-  R --> Q[Redis / BullMQ buffer]
-  Q --> W[Ordered processing worker]
+  DB --> W[Leased ordered processing worker]
+  DB -. Optional future relay .-> Q[Redis / BullMQ buffer]
+  Q -. Optional wakeup .-> W
   W --> AI[Model adapter]
   W --> S[Reminder / list / memory services]
   S --> DB
@@ -26,7 +26,7 @@ flowchart LR
   AUTH --> S
 ```
 
-The API-to-inbox/outbox path and local identity/onboarding processor exist today. The worker serializes short onboarding transactions and stores responses without sending them. Redis is provisionable, not integrated. General task leases, model, scheduler, sender, authenticated API and dashboard are planned. See [onboarding](onboarding.md).
+The API-to-inbox/outbox path, local identity/onboarding, tenant isolation and staged leased worker exist today. Onboarding responses are stored without sending them. Redis is provisionable but unused. Model, scheduler, sender, authenticated API and dashboard remain planned. See [onboarding](onboarding.md) and [work processing](work-processing.md).
 
 | Module     | Owns                                                        | Must not own                                  |
 | ---------- | ----------------------------------------------------------- | --------------------------------------------- |
@@ -63,15 +63,15 @@ Keys hash a structured tuple: message + business phone + provider message ID; st
 
 ## Queue handoff and recovery (M1)
 
-The outbox is the durable task register. A relay leases pending rows or expired leases using database time and `FOR UPDATE SKIP LOCKED`. Each claim gets a fresh token and lease expiry. It publishes only opaque event IDs to BullMQ. After publication it does **not** mark the task completed: a queue flush must still be recoverable. Consumers mark completion only with committed durable effects. A watchdog republishes expired incomplete work. Duplicate queue jobs are allowed; database idempotency makes retries safe.
+The outbox is the durable task register and current queue. The worker claims due pending rows atomically using database time and `FOR UPDATE SKIP LOCKED`. Each claim receives a fresh token, owner and expiry; preparation runs outside a transaction while a heartbeat renews the lease. Short database effects and acknowledgement commit together after checking the token and expiry before and after the effects. Each cycle recovers expired claims with bounded attempts. Stable error codes, jittered backoff and audited operator retry make failures recoverable. See [work processing](work-processing.md).
 
-Queue job IDs use safe UUID/hash strings, not raw WhatsApp IDs. Retry transient dependency errors with jitter and bounded attempts. Invalid payloads become dead tasks with stable error codes. Expired leases are reclaimed; compare the lease token on final writes to fence stale workers. Leases need renewal while model calls run. Queue availability is never a prerequisite for webhook acknowledgement.
+Redis/BullMQ may later provide wakeups, but queue publication must never mark a durable task complete. PostgreSQL remains authoritative after buffer loss. External calls require their own idempotency and uncertainty handling.
 
 ## Ordering and action execution (M1)
 
-Serialize by authenticated user (initially business-phone + sender mapping). Acquire a dedicated session advisory lock, then select the oldest unprocessed event for that user by durable sequence. Do not assume that whichever queue job obtained a lock is next. Acquire/release on the same database connection and release in `finally`; connection loss releases the lock. Do not hold an open SQL transaction across an LLM call.
+Ingress acquires transaction advisory locks per business-phone/sender stream before allocating sequence values, in sorted order for batches. Claims select the earliest incomplete item in each stage. Onboarding may advance past action backlog so consent controls remain available. Later actions wait for earlier incomplete onboarding/actions; dead or backing-off predecessors block their stream. Receipt streams use business phone and provider message ID.
 
-Global identity sequences can be allocated before another ingress transaction commits. The acceptance contract is **durably visible receipt order**, not perfect sender order. For closely arriving batches, use a short coalescing window and provider timestamps as context. Do not claim strict order across arbitrarily delayed provider webhooks. Add concurrency tests and document late-arrival behavior before enabling reference edits.
+The acceptance contract is committed ingress order established by stream-lock acquisition, not perfect sender order. Delayed provider messages join the end and cannot reorder committed effects. There is no coalescing window. Current identity rules reject stale control/consent transitions; ambiguous late reference edits need explicit handling when those features arrive. Action handlers must recheck current consent/timezone before preparation and under the user row lock in their final transaction.
 
 Persist the validated model plan before execution. On retry, reuse it; do not regenerate a potentially different list of actions. Derive action keys from inbound event ID + plan version + action index + kind. Within one transaction, insert the action receipt, apply entity changes, and enqueue reply intent. An existing receipt returns the original result. User identity comes from server context. All references must resolve within the user scope. Model-provided confidence is a routing signal, not authorization or calibrated truth.
 

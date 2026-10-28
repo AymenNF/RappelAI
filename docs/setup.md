@@ -31,7 +31,7 @@ Setup creates `.env` once with random local webhook secrets and preserves existi
 | `WHATSAPP_PHONE_NUMBER_ID` | Optional allowlist for a business phone; set before public exposure             |
 | `HOST`, `PORT`             | Bind address and port; local default is loopback                                |
 | `LOG_LEVEL`                | Structured API logging                                                          |
-| `WORKER_POLL_INTERVAL_MS`  | Diagnostic backlog poll; not a scheduler                                        |
+| `WORKER_POLL_INTERVAL_MS`  | Work/recovery cycle interval; not a reminder scheduler                          |
 
 Other `.env.example` fields are reserved for future integrations. Model IDs and Graph API version are deliberately unfilled until selected and verified.
 
@@ -69,6 +69,8 @@ Invoke-RestMethod http://localhost:3000/health/ready
 
 Run the health commands in a third terminal if the worker occupies the second. Live returns 200 if the API runs. Ready returns 200 only if the ingress and outbox tables can be queried. The worker handles local onboarding, logs `modelEnabled: false`, and leaves normal requests pending for the future model consumer. Onboarding responses are stored locally, not sent on WhatsApp. Try `npm run onboarding:chat`; see [onboarding](onboarding.md).
 
+The worker now uses renewable leases and ordered stages. Pending actions do not block onboarding. See [work processing](work-processing.md) for recovery, shutdown, ordering and the `work:retry` command.
+
 ## 5. Validate
 
 ```powershell
@@ -78,7 +80,7 @@ npm run test:integration
 npm run smoke
 ```
 
-Integration tests use a uniquely named schema, run the ingress migration, test concurrent replay and rollback, then remove only that schema. Use a disposable local/CI database, never production. CI also applies migrations twice to check that migration history is honored.
+Integration tests apply all migrations in uniquely named schemas and exercise replay, identity, restricted-role isolation and work lease recovery. Temporary schemas and login roles are removed afterward. Use a disposable local/CI database, never production. CI also applies migrations twice to check that migration history is honored.
 
 ```powershell
 npm run build

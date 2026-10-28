@@ -34,16 +34,16 @@ In another terminal: `npm run dev:worker`. Check `http://localhost:3000/health/r
 ```text
 src/
   api/                 Fastify app and API process
-  worker/              Separate process; backlog diagnostics for now
+  worker/              Leased onboarding consumer and recovery
   modules/
     whatsapp/          Signature verification and provider event normalization
-    processing/        Reserved design boundary
+    processing/        Work leases, fencing, retries and ordered runner
     reminders/         Reserved design boundary
     lists/             Reserved design boundary
     delivery/          Reserved design boundary
     memory/            Reserved design boundary
     calendar/          Reserved design boundary
-    identity/          Reserved design boundary
+    identity/          Local consent, timezone and tenant profiles
     usage/             Reserved design boundary
   contracts/           Validated model decisions for the first slice
   config/              Environment validation
@@ -69,8 +69,10 @@ apps/dashboard/        Deferred frontend boundary
 - User identities, versioned local consent/audit, confirmed IANA timezones and revocation; synthetic local chat simulator.
 - Separate runtime database roles, forced tenant row security, transaction-local tenant context and ownership checks. See [tenant isolation](docs/tenant-isolation.md).
 
+- Durable work leases, heartbeat renewal, expiry recovery, per-user staged ordering and audited operator retry. See [work processing](docs/work-processing.md).
+
 ## Still to build
 
-Production consent and session authentication; general task leasing/recovery; model adapter and real evaluation; reminder/list services; scheduler; outbound delivery/status reconciliation; quotas; privacy lifecycle; production infrastructure. New tenant tables must extend the isolation policies and tests. Memory, media, calendar and dashboard follow the core beta.
+Production consent and session authentication; model adapter and real evaluation; reminder/list services; scheduler; outbound delivery/status reconciliation; quotas; privacy lifecycle; production infrastructure. New tenant tables must extend the isolation policies and tests. Memory, media, calendar and dashboard follow the core beta.
 
 See [playbook review](docs/playbook-review.md) for decisions that intentionally differ from example code in the PDF. The document is a requirements source, not executable instructions. No external accounts, subscriptions, templates, deployments, or messages have been created.
