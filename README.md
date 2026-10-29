@@ -6,6 +6,8 @@ A WhatsApp-first personal assistant for reminders, lists, and eventually durable
 
 ## Start here
 
+M3-03 adds content-free runtime telemetry, administrator reconciliation queues, durable alert lifecycles and an independent monitor command. See the [telemetry runbook](docs/telemetry.md).
+
 M3-02 adds account-scoped JSON export requests, confirmed deletion with pending-work cancellation, replay protection and bounded retention maintenance. See the [privacy guide](docs/privacy.md).
 
 M3-01 adds request/model/send quotas, abuse blocking, inventory caps and a user-facing `QUOTA` command. See [quotas and abuse controls](docs/quotas.md).

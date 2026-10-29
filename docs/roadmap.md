@@ -75,7 +75,7 @@ M2-01 and M2-02 are implemented locally. Due reminders become durable outbound i
 
 ## M3 — private beta readiness (7–12 days)
 
-M3-01 is committed and pushed: quotas, abuse controls and truthful limit messages. M3-02 is implemented locally: account-scoped administrator exports, confirmed deletion, cancellation, unresolved-outcome holds, replay protection and bounded retention. See [privacy](privacy.md). Production export delivery, provider/backup cleanup and policy review remain activation work. Next is **M3-03: telemetry, reconciliation visibility and alerts**.
+M3-01 is committed and pushed: quotas, abuse controls and truthful limit messages. M3-02 is implemented locally: account-scoped administrator exports, confirmed deletion, cancellation, unresolved-outcome holds, replay protection and bounded retention. See [privacy](privacy.md). Production export delivery, provider/backup cleanup and policy review remain activation work. M3-03 is implemented locally with content-free telemetry, administrator reconciliation queues and durable alert transitions; see [telemetry](telemetry.md). Next is **M3-04: staging deployment, secrets, backups/PITR and a restore drill**.
 
 - Enforce per-user/global rate and spend limits, with visible quota behavior for existing commitments.
 - Authenticated export and deletion; deletion cancels work, revokes tokens and purges derived data. Retention includes logs/traces/staging/backup lifecycle.

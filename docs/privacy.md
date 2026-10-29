@@ -68,4 +68,4 @@ Exports use an account-scoped repeatable-read transaction. They include tables w
 
 Tests cover scoped exports and role denial, expired/foreign confirmations, cancellation and stale leases, complete owner erasure, recurrence/choice cycles, rollback, requests under quota exhaustion, reserved/unknown model holds, sends finishing during deletion, unknown-send reconciliation, concurrent replay, late receipt rejection, retention preview/bounds/idempotence and forced RLS. All provider responses are synthetic. The full regression suite remains required before release.
 
-Stop old workers, run `npm run db:migrate`, rebuild and restart. Live sending remains disabled. Next is **M3-03: telemetry, reconciliation visibility and alerts**. The beginner PDF remains the historical M1-08 snapshot.
+Stop old workers, run `npm run db:migrate`, rebuild and restart. Live sending remains disabled. M3-03 now supplies [telemetry, reconciliation visibility and alerts](telemetry.md). Next is M3-04 staging and restore verification. The beginner PDF remains the historical M1-08 snapshot.

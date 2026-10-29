@@ -14,6 +14,7 @@ import { ExecutionProcessor } from '../modules/processing/execution.js';
 import { ReceiptProcessor } from '../modules/whatsapp/receipts.js';
 import { ReminderScheduler } from '../modules/reminders/scheduler.js';
 import { DeliveryRecovery } from '../modules/whatsapp/recovery.js';
+import { databaseSink, RuntimeTelemetry } from '../modules/telemetry/runtime.js';
 
 // Local onboarding, optional offline planning and transactional execution; no provider sends.
 const config = readConfig();
@@ -32,6 +33,7 @@ const execution = new ExecutionProcessor();
 const receipts = new ReceiptProcessor();
 const scheduler = new ReminderScheduler(pool);
 const deliveryRecovery = new DeliveryRecovery(pool);
+const telemetry = new RuntimeTelemetry('worker', databaseSink(pool));
 const planner =
   config.MODEL_MODE === 'fixture'
     ? new PlanProcessor(pool, new ModelAdapter(fixtureTransport, config.MODEL_TIMEOUT_MS))
@@ -64,13 +66,17 @@ try {
   while (!stopping) {
     try {
       const cancelled = await queue.cancelDeleted();
+      telemetry.add('work_cancelled', cancelled);
       if (cancelled)
         console.log(JSON.stringify({ event: 'deletion_work_cancelled', count: cancelled }));
       const recovered = await queue.recoverExpired();
       const deliveriesRecovered = await deliveryRecovery.recover();
+      telemetry.add('delivery_recovered', deliveriesRecovered);
       if (deliveriesRecovered)
         console.log(JSON.stringify({ event: 'delivery_recovered', count: deliveriesRecovered }));
       const usageRecovered = await usage.recover();
+      telemetry.add('usage_recovered', usageRecovered);
+      telemetry.add('work_recovered', recovered);
       if (usageRecovered)
         console.log(JSON.stringify({ event: 'usage_recovered', count: usageRecovered }));
       if (recovered) console.log(JSON.stringify({ event: 'work_recovered', count: recovered }));
@@ -98,20 +104,13 @@ try {
         if (scheduled.examined)
           console.log(JSON.stringify({ event: 'reminders_scheduled', ...scheduled }));
       }
-      const result = await pool.query(
-        "SELECT stage,status,count(*)::int AS count FROM work_outbox WHERE status <> 'completed' GROUP BY stage,status",
-      );
-      console.log(
-        JSON.stringify({
-          event: 'work_backlog',
-          counts: result.rows,
-          modelMode: config.MODEL_MODE,
-          remoteModelEnabled: false,
-        }),
-      );
+      telemetry.add('cycles');
     } catch {
+      telemetry.add('cycle_failed');
       console.error(JSON.stringify({ level: 'error', event: 'work_cycle_failed' }));
     }
+    if (!(await telemetry.flush()))
+      console.error(JSON.stringify({ event: 'telemetry_flush_failed' }));
     try {
       await setTimeout(config.WORKER_POLL_INTERVAL_MS, undefined, { signal: controller.signal });
     } catch (error) {
@@ -119,5 +118,6 @@ try {
     }
   }
 } finally {
+  await telemetry.flush();
   await pool.end();
 }

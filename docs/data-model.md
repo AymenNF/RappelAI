@@ -4,6 +4,8 @@ The executable schema includes `schema_migrations`, `ingress_events`, `work_outb
 
 ## Current schema
 
+Migration 0019 adds administrator-only telemetry counters, runtime heartbeats, batch deduplication, monitoring expectations, one current snapshot, fixed alert states and transition history. Runtime roles can only record their own component through a validated function. No account/content fields are added to monitoring storage. See [telemetry](telemetry.md).
+
 Migration 0018 adds `privacy_requests`, `privacy_actions`, the account deletion marker, ingress redaction timestamps, private replay fingerprints/key, retention policy and aggregate privacy-operation records. Ownership foreign keys support atomic administrator erasure without granting runtime DELETE access. See [privacy](privacy.md).
 
 Migration 0017 adds administrator-owned quota policy/audit, tenant-isolated account blocks and counters, immutable request admissions with event-owner validation, and shared global attempt counters. See [quotas](quotas.md).

@@ -1,6 +1,6 @@
 # Operations, launch gates and cost planning
 
-This is the target runbook. No production deployment, alarms, backups, provider connections or paid calls are configured by the scaffold.
+This combines the local implementation and target production runbook. M3-03 now implements fixed runtime telemetry, administrator diagnostics and durable alerts through `ops:control check|watch|status`; see [telemetry](telemetry.md) for thresholds, access, retention and commands. No production deployment, external paging destination, backups or live provider activation is configured.
 
 ## Environments and release
 
@@ -12,7 +12,7 @@ Rollback: stop new spending if needed; roll back compatible application image; p
 
 ## Local work recovery
 
-M1-03 now recovers expired leases on each worker cycle, caps retries and preserves per-user order. Inspect dead work, repair its cause and use `npm run work:retry -- <dead-work-uuid> <operator-label>`. See the [work processing runbook](work-processing.md) for the full contract and known limits. Production alerts and external-send reconciliation below remain planned.
+M1-03 now recovers expired leases on each worker cycle, caps retries and preserves per-user order. Inspect dead work, repair its cause and use `npm run work:retry -- <dead-work-uuid> <operator-label>`. See the [work processing runbook](work-processing.md) for the full contract and known limits. External-send reconciliation is implemented; M3-03 adds local detection and durable alert state. External paging and deployment supervision remain to be configured.
 
 ## Spending controls
 
@@ -32,7 +32,7 @@ M1-05 provides `npm run usage:control -- status`, `pause`, `resume`, limit/rate 
 | DB storage / connections / lag       | Provider-specific headroom thresholds                            | Scale or correct retention/query behavior                       |
 | Restore verification                 | Before beta and at a regular operational cadence                 | Restore to isolated instance and exercise pending-work recovery |
 
-Targets are unmeasured until telemetry and traffic exist. Avoid high-cardinality labels containing phone numbers or raw messages. Trace by opaque IDs. Count API acceptance, delivery and read separately. Digests have many occurrences per outbound message, so use the join table for reliability and the ledger for cost.
+Targets are unmeasured until telemetry and traffic exist. Avoid high-cardinality labels containing phone numbers or raw messages. Trace by opaque IDs. Count API acceptance, delivery and read separately. Current digest entries are individual messages at a daily slot. The current monitor reports attempt counts and lateness, not an on-time-delivery SLO; a future cohort calculation must include missing deliveries and deduplicate retries. Use the ledger for cost.
 
 ## Failure exercises
 

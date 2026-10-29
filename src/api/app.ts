@@ -4,13 +4,46 @@ import type { IngressStore } from '../db/ingress-store.js';
 import { IngressCapacityError, IngressBatchError } from '../db/ingress-store.js';
 import { verifySignature } from '../modules/whatsapp/signature.js';
 import { extractEvents } from '../modules/whatsapp/events.js';
+import type { RuntimeTelemetry } from '../modules/telemetry/runtime.js';
+import { randomUUID } from 'node:crypto';
 
-export function buildApp(config: Config, store: IngressStore) {
+export function buildApp(
+  config: Config,
+  store: IngressStore,
+  telemetry?: RuntimeTelemetry,
+  logDestination?: { write(chunk: string): void },
+) {
   const app = Fastify({
     bodyLimit: 1024 * 1024,
     requestTimeout: 10000,
     logController: new LogController({ disableRequestLogging: true }),
-    logger: config.LOG_LEVEL === 'silent' ? false : { level: config.LOG_LEVEL },
+    genReqId: () => randomUUID(),
+    logger:
+      config.LOG_LEVEL === 'silent'
+        ? false
+        : {
+            level: config.LOG_LEVEL,
+            ...(logDestination ? { stream: logDestination } : {}),
+            serializers: {
+              req: () => ({}),
+              res: (r) => ({ statusCode: r.statusCode }),
+              err: () => ({ type: 'redacted', message: 'Request failed', stack: '' }),
+            },
+          },
+  });
+  app.setNotFoundHandler((_request, reply) => reply.code(404).send({ error: 'not_found' }));
+  app.setErrorHandler((error, request, reply) => {
+    const status =
+      typeof error === 'object' && error !== null && 'statusCode' in error
+        ? error.statusCode
+        : undefined;
+    const code = typeof status === 'number' && status >= 400 && status < 600 ? status : 500;
+    request.log.error({ event: 'http_request_failed', statusCode: code }, 'Request failed');
+    return reply.code(code).send({ error: code >= 500 ? 'internal_error' : 'invalid_request' });
+  });
+  app.addHook('onResponse', async (request, reply) => {
+    if (request.method === 'POST' && request.routeOptions.url === '/webhooks/whatsapp')
+      telemetry?.http(reply.statusCode, reply.elapsedTime);
   });
 
   app.get('/health/live', async () => ({ status: 'ok' }));

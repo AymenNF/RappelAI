@@ -1,5 +1,7 @@
 # Architecture and system design
 
+M3-03 records fixed numeric runtime batches and heartbeats without message content. An independent administrator monitor snapshots operational aggregates, persists idempotent alert transitions, and exposes bounded reconciliation queues. Acknowledgement never changes provider/business state. See [telemetry](telemetry.md).
+
 M3-02 uses confirmed account deletion to stop new activity, with administrator erasure held until external outcomes are resolved. Shared runtime/exclusive maintenance locks serialize erasure against ingress and result persistence. A keyed address fingerprint prevents replay from recreating the account. Exports are account-scoped local JSON; retention has a bounded dry-run/apply CLI. See [privacy](privacy.md).
 
 M3-01 gates request admission, model/send authorization and inventory expansion with transactional quotas. Exact due promises stay unchanged when sending is blocked. Queue capacity uses a database lock across API processes; safety controls and receipt processing remain available. See [quotas](quotas.md).
