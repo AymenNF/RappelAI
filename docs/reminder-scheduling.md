@@ -30,7 +30,7 @@ Current onboarding eligibility and exact consent/timezone snapshots must match t
 
 STOP and identity changes suppress already queued pending reminder messages and their occurrences in the onboarding transaction. If a sweep commits first, STOP suppresses its result next. If STOP commits first, the sweep sees changed identity and creates only suppressed records. They serialize on the user row. Shutdown observed before commit rolls back the sweep; committed work stays durable.
 
-Canceled/completed states are respected before selection; public cancel/complete/snooze commands remain M2-04. M2-02 reminder dispatch rechecks reminder lifecycle/version, consent/grant/timezone, outbound state, service window, template availability and the global usage pause before dispatch. WhatsApp budget qualification remains a live-activation prerequisite. A queued record is not permanent authorization to send.
+Canceled/completed states are respected before selection. M2-04 now supplies cancel/complete/snooze commands, increments schedule versions and invalidates stale controls/intents; see [reminder controls](reminder-controls.md). M2-02 reminder dispatch rechecks reminder lifecycle/version, consent/grant/timezone, outbound state, service window, template availability and the global usage pause before dispatch. WhatsApp budget qualification remains a live-activation prerequisite. A queued record is not permanent authorization to send.
 
 Closed messaging windows and paused spending do not prevent local materialization. Those are send-time gates; missing templates or budgets must not make due work disappear. A sweep creates no WhatsApp attempts or model reservations. Live sending remains disabled.
 
@@ -47,8 +47,8 @@ SELECT occurrence_id, available_at, status, suppression_reason
 FROM outbound_messages ORDER BY available_at;
 ```
 
-Both new tables force RLS. Tenants can read only their own rows; ingress has no access. Workers can materialize/suppress work, but cannot edit outbound bodies, change reminder due times or delete evidence. Missing tenant context is default-deny.
+Both new tables force RLS. Tenants can read only their own rows; ingress has no access. Workers can materialize/suppress work but cannot edit outbound bodies or delete evidence. M2-04 adds column-level worker updates for reminder status, due time and schedule version through the mutation handler. Missing tenant context is default-deny.
 
 Restricted-login tests cover competing schedulers, restart/replay, future/canceled/completed exclusion, microsecond precision, rollback at insertion/final marker, batch bounds, busy-user skipping, stale identity snapshots, STOP before/after and during scheduling, shutdown rollback, spending/window independence, ownership constraints and a saved-plan-to-due-occurrence path. Controlled transaction failures do not demonstrate an operating-system crash recovery SLO or live delivery.
 
-M2-02 now connects this queue to attempts and template/window rules through an injectable test service; see [reminder delivery](reminder-delivery.md). Next is M2-03 audited reconciliation and retries. EXT-01/02, replacement consent, qualified rates and live model evaluation remain external/product prerequisites. The 33-page PDF is an M1-08 snapshot; this runbook describes the subsequent scheduling addition.
+M2-02 connects this queue to attempts and template/window rules through an injectable test service; see [reminder delivery](reminder-delivery.md). M2-03 supplies recovery and M2-04 supplies lifecycle controls. Next is M2-05 recurrence and DST rules. EXT-01/02, replacement consent, qualified rates and live model evaluation remain external/product prerequisites. The 33-page PDF is an M1-08 snapshot; this runbook describes the subsequent scheduling addition.

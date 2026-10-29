@@ -1,5 +1,6 @@
 import type { PoolClient } from 'pg';
 import { reminderArgs } from '../../contracts/decision.js';
+import { ensureReminderControl } from './controls.js';
 import {
   actionResult,
   ExpiredReminderError,
@@ -28,6 +29,7 @@ export async function createReminder(
       title: old.title,
       dueAt: old.due_at.toISOString(),
       timezone: old.timezone,
+      reference: await ensureReminderControl(client, source.userId, old.id),
     });
   const row = (
     await client.query(
@@ -51,5 +53,6 @@ export async function createReminder(
     title: row.title,
     dueAt: row.due_at.toISOString(),
     timezone: row.timezone,
+    reference: await ensureReminderControl(client, source.userId, row.id),
   });
 }

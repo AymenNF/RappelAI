@@ -514,7 +514,7 @@ test(
             /foreign key/,
           );
           await assert.rejects(
-            worker.query('UPDATE reminders SET due_at=now()'),
+            worker.query("UPDATE reminders SET title='unauthorized edit'"),
             /permission denied/,
           );
           await assert.rejects(

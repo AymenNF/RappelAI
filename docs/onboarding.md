@@ -32,4 +32,6 @@ Responses are stored in `identity_results.reply_text` and shown by the simulator
 
 ## Next work
 
+M2-04 now recognizes exact DONE/COMPLETE, CANCEL and SNOOZE commands plus reminder button IDs after consent/timezone checks. They complete in the onboarding transaction and store the response here, bypassing model work. STOP/settings changes invalidate existing controls. See [reminder controls](reminder-controls.md) for syntax and behavior. Other historical milestone notes below describe the original onboarding baseline.
+
 M1-02 is implemented for the current schema; see [tenant isolation](tenant-isolation.md). M1-03 adds general work leases/recovery beyond the short onboarding transaction. Then attach the real model adapter, action services and outbound sender behind current consent and budget checks.

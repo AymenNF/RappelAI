@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { WorkQueue, type WorkTransition } from '../processing/leases.js';
+import { applyReminderCommand, reminderCommand } from '../reminders/controls.js';
 import {
   CONSENT_NOTICE,
   CONSENT_VERSION,
@@ -64,8 +65,9 @@ export class IdentityProcessor {
       event.payload.type === 'text' && typeof event.payload.text?.body === 'string'
         ? event.payload.text.body
         : null;
+    const command = reminderCommand(event.payload);
     const transition = validTime
-      ? onboard(user as IdentityState, text, sentAt, now)
+      ? onboard(user as IdentityState, command && !text ? 'reminder control' : text, sentAt, now)
       : {
           state: user as IdentityState,
           disposition: 'blocked' as const,
@@ -73,6 +75,10 @@ export class IdentityProcessor {
           consentAction: null,
         };
     const s = transition.state;
+    if (command && transition.disposition === 'ready') {
+      transition.reply = await applyReminderCommand(client, event.id, user.id, command);
+      transition.disposition = 'handled';
+    }
     await client.query(
       `UPDATE users SET consent_version=$2, consent_at=$3, consent_token=$4,
         consent_expires_at=$5, paused=$6, timezone=$7, timezone_confirmed_at=$8,
@@ -121,6 +127,12 @@ export class IdentityProcessor {
       [user.id, !hasOnboarded(s), s.consent_at, s.timezone_confirmed_at],
     );
     // The scheduler takes the same user lock. STOP/settings changes invalidate queued reminders too.
+    await client.query(
+      `UPDATE reminder_controls SET invalidated_at=clock_timestamp() WHERE user_id=$1 AND invalidated_at IS NULL
+        AND ($2::boolean OR consent_grant_at IS DISTINCT FROM $3::timestamptz
+          OR timezone_confirmed_at IS DISTINCT FROM $4::timestamptz)`,
+      [user.id, !hasOnboarded(s), s.consent_at, s.timezone_confirmed_at],
+    );
     await client.query(
       `WITH invalidated AS (
         UPDATE outbound_messages SET status='suppressed',suppression_reason='identity_changed'

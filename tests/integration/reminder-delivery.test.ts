@@ -1,4 +1,9 @@
 import { ReminderSender } from '../../src/modules/delivery/reminder-sender.js';
+import {
+  applyReminderCommand,
+  ensureReminderControl,
+  controlButtons,
+} from '../../src/modules/reminders/controls.js';
 import { ReceiptProcessor } from '../../src/modules/whatsapp/receipts.js';
 import type { WhatsAppTransport, WhatsAppMessage } from '../../src/modules/whatsapp/send.js';
 import { test } from 'node:test';
@@ -249,6 +254,9 @@ test(
                 phoneNumberId: phone,
                 recipientId: alice,
                 body: 'Reminder: Call dentist',
+                buttons: controlButtons(
+                  (await worker.query('SELECT reference FROM reminder_controls')).rows[0].reference,
+                ),
               });
               return { state: 'accepted', providerMessageId: 'wamid.single' };
             },
@@ -786,6 +794,532 @@ test(
             /foreign key/,
           );
           assert.ok(tid);
+        },
+      );
+      const referenceFor = async (item: { userId: string; reminderId: string }) => {
+        const client = await worker.connect();
+        try {
+          await client.query('BEGIN');
+          await client.query('SELECT id FROM users WHERE id=$1 FOR UPDATE', [item.userId]);
+          const reference = await ensureReminderControl(client, item.userId, item.reminderId);
+          await client.query('COMMIT');
+          return reference;
+        } catch (error) {
+          await client.query('ROLLBACK');
+          throw error;
+        } finally {
+          client.release();
+        }
+      };
+      const commandEvent = async (
+        reference: string,
+        action = 'complete',
+        who = alice,
+        minutes?: number,
+      ) => {
+        const eventId = await inbound(
+          who,
+          `${action === 'complete' ? 'DONE' : action.toUpperCase()} ${reference}${minutes === undefined ? '' : ` ${minutes}m`}`,
+        );
+        return eventId;
+      };
+      const processCommand = async (eventId: string) => {
+        const result = await new IdentityProcessor(worker).processNext();
+        assert.equal(result?.eventId, eventId);
+        assert.equal(result?.disposition, 'handled');
+        assert.equal(
+          (await worker.query('SELECT status FROM work_outbox WHERE event_id=$1', [eventId]))
+            .rows[0].status,
+          'completed',
+        );
+        assert.equal(
+          (await worker.query('SELECT 1 FROM action_plans WHERE event_id=$1', [eventId])).rowCount,
+          0,
+        );
+        return (await worker.query('SELECT * FROM reminder_mutations WHERE event_id=$1', [eventId]))
+          .rows[0];
+      };
+      const reminder = async (id: string) =>
+        (await worker.query('SELECT * FROM reminders WHERE id=$1', [id])).rows[0];
+
+      await t.test(
+        'complete and cancel atomically suppress all queued delivery and reject replayed controls',
+        async () => {
+          for (const action of ['complete', 'cancel']) {
+            await reset();
+            const item = await seed();
+            const reference = await referenceFor(item);
+            const eventId = await commandEvent(reference, action);
+            assert.equal((await processCommand(eventId)).outcome, 'applied');
+            assert.equal(
+              (await reminder(item.reminderId)).status,
+              action === 'complete' ? 'completed' : 'cancelled',
+            );
+            assert.equal((await reminder(item.reminderId)).schedule_version, 2);
+            for (const table of ['reminder_occurrences', 'outbound_messages']) {
+              const row = (await worker.query(`SELECT status,suppression_reason FROM ${table}`))
+                .rows[0];
+              assert.deepEqual(row, {
+                status: 'suppressed',
+                suppression_reason: 'reminder_changed',
+              });
+            }
+            assert.equal((await sender().send(item.outboundId)).state, 'suppressed');
+            assert.equal(calls, 0);
+            assert.equal(
+              (await processCommand(await commandEvent(reference, 'snooze'))).outcome,
+              'stale',
+            );
+            assert.equal((await reminder(item.reminderId)).schedule_version, 2);
+            assert.equal((await scheduler.sweep()).examined, 0);
+          }
+        },
+      );
+      await t.test(
+        'snooze uses database time, rotates controls and schedules exactly one new occurrence',
+        async () => {
+          await reset();
+          const item = await seed();
+          const reference = await referenceFor(item);
+          const before = (
+            await worker.query('SELECT clock_timestamp() AS at')
+          ).rows[0].at.getTime();
+          const eventId = await commandEvent(reference, 'snooze', alice, 15);
+          const result = await processCommand(eventId);
+          const current = await reminder(item.reminderId);
+          assert.equal(current.status, 'pending');
+          assert.equal(current.scheduled_at, null);
+          assert.equal(current.schedule_version, 2);
+          const after = (await worker.query('SELECT clock_timestamp() AS at')).rows[0].at.getTime();
+          assert.ok(
+            current.due_at.getTime() >= before + 900000 &&
+              current.due_at.getTime() <= after + 900000,
+          );
+          const fresh = await referenceFor(item);
+          assert.notEqual(fresh, reference);
+          assert.match(result.reply_text, new RegExp(fresh));
+          const replayClient = await worker.connect();
+          try {
+            await replayClient.query('BEGIN');
+            assert.equal(
+              await applyReminderCommand(replayClient, eventId, item.userId, {
+                action: 'snooze',
+                reference,
+                minutes: 15,
+              }),
+              result.reply_text,
+            );
+            await replayClient.query('COMMIT');
+          } finally {
+            replayClient.release();
+          }
+          assert.equal((await reminder(item.reminderId)).schedule_version, 2);
+          assert.equal((await scheduler.sweep()).examined, 0);
+          assert.equal((await processCommand(await commandEvent(reference))).outcome, 'stale');
+          // Advance the scheduled time as a test-clock substitute, retaining the new version.
+          await admin.query(
+            "UPDATE reminders SET due_at=clock_timestamp()-interval '1 second' WHERE id=$1",
+            [item.reminderId],
+          );
+          const sweeps = await Promise.all([scheduler.sweep(), scheduler.sweep()]);
+          assert.equal(
+            sweeps.reduce((n, r) => n + r.materialized, 0),
+            1,
+          );
+          const rows = (
+            await worker.query('SELECT * FROM reminder_occurrences ORDER BY schedule_version')
+          ).rows;
+          assert.equal(rows.length, 2);
+          assert.equal(rows[0].status, 'suppressed');
+          assert.equal(rows[1].schedule_version, 2);
+          assert.equal(rows[1].status, 'pending');
+          assert.equal((await sender().send(item.outboundId)).state, 'suppressed');
+          const newOutbound = (
+            await worker.query('SELECT id FROM outbound_messages WHERE occurrence_id=$1', [
+              rows[1].id,
+            ])
+          ).rows[0].id;
+          let newButtons: unknown;
+          assert.equal(
+            (
+              await sender({
+                send: async (message) => {
+                  newButtons = 'buttons' in message ? message.buttons : null;
+                  return { state: 'accepted', providerMessageId: 'wamid.snoozed' };
+                },
+              }).send(newOutbound)
+            ).state,
+            'accepted',
+          );
+          assert.deepEqual(newButtons, controlButtons(fresh));
+          assert.equal((await processCommand(await commandEvent(fresh))).outcome, 'applied');
+        },
+      );
+      await t.test(
+        'real inbound button payloads obey owner and version checks; display titles cannot change actions',
+        async () => {
+          await reset();
+          const item = await seed();
+          const reference = await referenceFor(item);
+          const eventId = await inbound(alice, 'placeholder');
+          await admin.query(`UPDATE ingress_events SET payload=$2 WHERE id=$1`, [
+            eventId,
+            {
+              type: 'interactive',
+              timestamp: String(Math.floor(Date.now() / 1000)),
+              interactive: {
+                type: 'button_reply',
+                button_reply: { id: `reminder:${reference}:snooze`, title: 'Cancel' },
+              },
+            },
+          ]);
+          assert.equal((await processCommand(eventId)).action, 'snooze');
+          const stale = await inbound(alice, 'placeholder');
+          await admin.query(`UPDATE ingress_events SET payload=$2 WHERE id=$1`, [
+            stale,
+            {
+              type: 'button',
+              timestamp: String(Math.floor(Date.now() / 1000)),
+              button: { payload: `reminder:${reference}:complete` },
+            },
+          ]);
+          assert.equal((await processCommand(stale)).outcome, 'stale');
+          assert.equal((await reminder(item.reminderId)).status, 'pending');
+        },
+      );
+      await t.test(
+        'foreign, missing, expired and identity-invalidated controls reveal no target and do not mutate',
+        async () => {
+          await reset();
+          const a = await seed(alice),
+            b = await seed(bob);
+          const reference = await referenceFor(a);
+          const foreign = await processCommand(await commandEvent(reference, 'cancel', bob));
+          const missing = await processCommand(
+            await commandEvent('0000000000000000', 'cancel', bob),
+          );
+          assert.equal(foreign.outcome, 'stale');
+          assert.equal(foreign.reminder_id, null);
+          assert.equal(foreign.reply_text, missing.reply_text);
+          await admin.query(
+            "UPDATE reminder_controls SET expires_at=clock_timestamp()-interval '1 second' WHERE reference=$1",
+            [reference],
+          );
+          assert.equal((await processCommand(await commandEvent(reference))).outcome, 'stale');
+          const bRef = await referenceFor(b);
+          await inbound(bob, 'TIMEZONE Europe/Paris');
+          await new IdentityProcessor(worker).processNext();
+          assert.ok(
+            (
+              await worker.query(
+                'SELECT invalidated_at FROM reminder_controls WHERE reference=$1',
+                [bRef],
+              )
+            ).rows[0].invalidated_at,
+          );
+          assert.equal((await reminder(a.reminderId)).schedule_version, 1);
+          assert.equal((await reminder(b.reminderId)).schedule_version, 1);
+          const client = await worker.connect();
+          try {
+            await client.query('BEGIN');
+            await assert.rejects(
+              applyReminderCommand(client, a.eventId, b.userId, {
+                action: 'cancel',
+                reference,
+                minutes: 10,
+              }),
+              /owner mismatch/,
+            );
+            await client.query('ROLLBACK');
+          } finally {
+            client.release();
+          }
+        },
+      );
+      await t.test(
+        'malformed duration and invalid provider timestamp cannot trigger model work or mutations',
+        async () => {
+          await reset();
+          const item = await seed(),
+            reference = await referenceFor(item);
+          assert.equal(
+            (await processCommand(await commandEvent(reference, 'snooze', alice, 1441))).outcome,
+            'invalid',
+          );
+          const invalid = await commandEvent(reference);
+          await admin.query(
+            "UPDATE ingress_events SET payload=jsonb_set(payload,'{timestamp}','\"0\"') WHERE id=$1",
+            [invalid],
+          );
+          assert.equal((await new IdentityProcessor(worker).processNext())?.disposition, 'blocked');
+          assert.equal(
+            (await worker.query('SELECT 1 FROM reminder_mutations WHERE event_id=$1', [invalid]))
+              .rowCount,
+            0,
+          );
+          assert.equal((await reminder(item.reminderId)).schedule_version, 1);
+        },
+      );
+      await t.test(
+        'simultaneous controls serialize: one changes the reminder and the other is stale',
+        async () => {
+          await reset();
+          const item = await seed(),
+            reference = await referenceFor(item);
+          const events = [
+            await commandEvent(reference, 'snooze'),
+            await commandEvent(reference, 'cancel'),
+          ];
+          const results = await Promise.all(
+            events.map(async (eventId, index) => {
+              const client = await worker.connect();
+              try {
+                await client.query('BEGIN');
+                await applyReminderCommand(client, eventId, item.userId, {
+                  action: index === 0 ? 'snooze' : 'cancel',
+                  reference,
+                  minutes: 10,
+                });
+                await client.query('COMMIT');
+              } catch (error) {
+                await client.query('ROLLBACK');
+                throw error;
+              } finally {
+                client.release();
+              }
+              return (
+                await worker.query('SELECT outcome FROM reminder_mutations WHERE event_id=$1', [
+                  eventId,
+                ])
+              ).rows[0].outcome;
+            }),
+          );
+          assert.deepEqual(results.sort(), ['applied', 'stale']);
+          assert.equal((await reminder(item.reminderId)).schedule_version, 2);
+        },
+      );
+      await t.test(
+        'mutation failure and lease expiry roll back reminder, intent, control, and receipt together',
+        async () => {
+          for (const expire of [false, true]) {
+            await reset();
+            const item = await seed(),
+              reference = await referenceFor(item);
+            const eventId = await commandEvent(reference, 'cancel');
+            const queue = new WorkQueue(worker);
+            const lease = await queue.claim(
+              'onboarding',
+              'mutation-rollback',
+              expire ? 500 : 30000,
+            );
+            assert.ok(lease);
+            await assert.rejects(
+              queue.commit(lease, async (client) => {
+                const result = await new IdentityProcessor(worker).apply(client, eventId);
+                if (!expire) throw new Error('injected transaction failure');
+                await client.query('SELECT pg_sleep(0.55)');
+                return result;
+              }),
+            );
+            assert.equal((await reminder(item.reminderId)).schedule_version, 1);
+            assert.equal(
+              (
+                await worker.query('SELECT status FROM outbound_messages WHERE id=$1', [
+                  item.outboundId,
+                ])
+              ).rows[0].status,
+              'pending',
+            );
+            assert.equal(
+              (
+                await worker.query(
+                  'SELECT invalidated_at FROM reminder_controls WHERE reference=$1',
+                  [reference],
+                )
+              ).rows[0].invalidated_at,
+              null,
+            );
+            assert.equal((await worker.query('SELECT 1 FROM reminder_mutations')).rowCount, 0);
+          }
+        },
+      );
+      await t.test(
+        'cancel exhausts queued retries but preserves accepted and unknown delivery evidence',
+        async () => {
+          for (const state of ['rejected', 'accepted', 'unknown'] as const) {
+            await reset();
+            const item = await seed(),
+              reference = await referenceFor(item);
+            const result = await sender({
+              send: async () =>
+                state === 'accepted'
+                  ? { state, providerMessageId: 'wamid.preserved' }
+                  : { state, code: 'synthetic', retryable: true },
+            }).send(item.outboundId);
+            await processCommand(await commandEvent(reference, 'cancel'));
+            const row = await attempt(item.outboundId);
+            assert.equal(row.state, state);
+            assert.equal(row.recovery_state, state === 'rejected' ? 'exhausted' : 'none');
+            assert.equal(row.retry_at, null);
+            assert.equal((await sender().send(item.outboundId)).id, result.id);
+            assert.equal(calls, 0);
+          }
+        },
+      );
+      await t.test(
+        'late rejection after cancellation cannot requeue; authorized acceptance remains recorded',
+        async () => {
+          for (const accepted of [false, true]) {
+            await reset();
+            const item = await seed();
+            const reference = await referenceFor(item);
+            const result = await new ReminderSender(
+              worker,
+              {
+                send: async () => {
+                  await processCommand(await commandEvent(reference, 'cancel'));
+                  return accepted
+                    ? { state: 'accepted', providerMessageId: 'wamid.inflight' }
+                    : { state: 'rejected', code: 'limited', retryable: true };
+                },
+              },
+              { ...policy, timeoutMs: 2000 },
+            ).send(item.outboundId);
+            assert.equal(result.state, accepted ? 'accepted' : 'rejected');
+            const row = await attempt(item.outboundId);
+            assert.equal(row.recovery_state, accepted ? 'none' : 'exhausted');
+            assert.equal((await reminder(item.reminderId)).status, 'cancelled');
+          }
+        },
+      );
+      await t.test(
+        'cancel committed while a sender waits prevents authorization; scheduler skips the held user',
+        async () => {
+          await reset();
+          const item = await seed(),
+            reference = await referenceFor(item);
+          const eventId = await commandEvent(reference, 'cancel');
+          const client = await worker.connect();
+          let sending: Promise<{ value?: { state: string }; error?: unknown }> | undefined;
+          try {
+            await client.query('BEGIN');
+            await new IdentityProcessor(worker).apply(client, eventId);
+            sending = sender()
+              .send(item.outboundId)
+              .then(
+                (value) => ({ value }),
+                (error) => ({ error }),
+              );
+            let waiting = false;
+            for (let i = 0; i < 150; i++) {
+              if (
+                (
+                  await admin.query(
+                    "SELECT 1 FROM pg_stat_activity WHERE application_name=$1 AND wait_event_type='Lock'",
+                    [appName],
+                  )
+                ).rowCount
+              ) {
+                waiting = true;
+                break;
+              }
+              await setTimeout(10);
+            }
+            assert.ok(waiting, 'sender must wait for the same user lock');
+            assert.equal((await scheduler.sweep()).examined, 0);
+            assert.equal(calls, 0);
+            await client.query('COMMIT');
+          } finally {
+            await client.query('ROLLBACK');
+            client.release();
+          }
+          const result = await sending;
+          assert.equal(result?.error, undefined);
+          assert.equal(result?.value?.state, 'suppressed');
+          assert.equal(calls, 0);
+        },
+      );
+      await t.test(
+        'STOP invalidates controls and cannot be undone by a delayed reminder button',
+        async () => {
+          await reset();
+          const item = await seed(),
+            reference = await referenceFor(item);
+          await inbound(alice, 'STOP');
+          await new IdentityProcessor(worker).processNext();
+          const eventId = await commandEvent(reference, 'snooze');
+          assert.equal((await new IdentityProcessor(worker).processNext())?.disposition, 'blocked');
+          assert.equal(
+            (await worker.query('SELECT 1 FROM reminder_mutations WHERE event_id=$1', [eventId]))
+              .rowCount,
+            0,
+          );
+          assert.equal((await reminder(item.reminderId)).schedule_version, 1);
+          assert.ok(
+            (
+              await worker.query(
+                'SELECT invalidated_at FROM reminder_controls WHERE reference=$1',
+                [reference],
+              )
+            ).rows[0].invalidated_at,
+          );
+          assert.equal((await sender().send(item.outboundId)).state, 'suppressed');
+          assert.equal(calls, 0);
+        },
+      );
+      await t.test(
+        'control and mutation tables enforce tenant isolation, immutable receipts and narrow grants',
+        async () => {
+          await reset();
+          const a = await seed(alice),
+            b = await seed(bob);
+          const ar = await referenceFor(a),
+            br = await referenceFor(b);
+          await processCommand(await commandEvent(ar, 'cancel'));
+          await processCommand(await commandEvent(br, 'cancel', bob));
+          for (const table of ['reminder_controls', 'reminder_mutations']) {
+            assert.equal((await tenant.query(`SELECT * FROM ${table}`)).rowCount, 0);
+            await withTenant(tenant, a.userId, async (client) => {
+              const rows = (await client.query(`SELECT user_id FROM ${table}`)).rows;
+              assert.equal(rows.length, 1);
+              assert.equal(rows[0].user_id, a.userId);
+              await assert.rejects(client.query(`DELETE FROM ${table}`), /permission denied/);
+            });
+            await assert.rejects(ingress.query(`SELECT * FROM ${table}`), /permission denied/);
+            const flags = (
+              await admin.query(
+                'SELECT relrowsecurity,relforcerowsecurity FROM pg_class WHERE oid=$1::regclass',
+                [`${schema}.${table}`],
+              )
+            ).rows[0];
+            assert.ok(flags.relrowsecurity && flags.relforcerowsecurity);
+          }
+          await assert.rejects(
+            worker.query("UPDATE reminder_mutations SET reply_text='forged'"),
+            /permission denied/,
+          );
+          await assert.rejects(
+            worker.query(
+              `INSERT INTO reminder_mutations(event_id,user_id,action,outcome,reply_text)
+            VALUES($1,$2,'cancel','stale','forged')`,
+              [a.eventId, b.userId],
+            ),
+            /owner mismatch/,
+          );
+          await assert.rejects(
+            worker.query(
+              "UPDATE reminder_controls SET expires_at=clock_timestamp()+interval '1 year'",
+            ),
+            /permission denied/,
+          );
+          await assert.rejects(
+            worker.query(
+              `INSERT INTO reminder_controls(user_id,reminder_id,schedule_version,consent_grant_at,timezone_confirmed_at,timezone,expires_at)
+          VALUES($1,$2,99,now(),now(),'UTC',now())`,
+              [a.userId, b.reminderId],
+            ),
+            /foreign key/,
+          );
         },
       );
     } finally {

@@ -1,8 +1,10 @@
 # Architecture and system design
 
-Status: target system with implemented ingress, identity, tenant isolation, work leases, persisted plans, usage controls, local action execution, due scheduling and tested reminder delivery. Live outbound remains disabled. Updated 2026-10-28. Assumptions: solo developer, small private beta, WhatsApp first, TypeScript, one region, managed PostgreSQL at launch. Country, hosting, languages and provider choices remain open in [decisions](decisions/README.md).
+Status: target system with implemented ingress, identity, tenant isolation, work leases, persisted plans, usage controls, local action execution, due scheduling, tested reminder delivery/recovery and reminder lifecycle controls. Live outbound remains disabled. Updated 2026-10-29. Assumptions: solo developer, small private beta, WhatsApp first, TypeScript, one region, managed PostgreSQL at launch. Country, hosting, languages and provider choices remain open in [decisions](decisions/README.md).
 
 ## Shape and boundaries
+
+M2-04 routes exact reminder commands and button IDs through the leased onboarding stage. A user-bound, version-bound control selects the reminder; one transaction changes its lifecycle/schedule, suppresses stale intents, exhausts their retries and saves a mutation receipt plus response. Creation/snooze confirmations expose a reference for subsequent commands. No model or external call is needed. The sender and scheduler share the user lock; old buttons cannot change a new schedule, while already authorized sends retain their evidence. See [reminder controls](reminder-controls.md).
 
 M2-03 adds a local recovery pass and an administrator reconciliation service around the shared WhatsApp attempt ledger. Recovery records expired dispatches as unknown; it does not resend them. Sender entry points authorize bounded retries after definite rejection or an evidenced operator decision. Every successor rechecks eligibility, and late contradictory acceptance pauses sending. See [delivery recovery](delivery-recovery.md).
 

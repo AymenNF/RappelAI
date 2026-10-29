@@ -4,6 +4,8 @@ The executable schema includes `schema_migrations`, `ingress_events`, `work_outb
 
 ## Current schema
 
+Migration 0013 adds `reminder_controls` (one owner/identity/version-bound reference per reminder schedule) and immutable `reminder_mutations` (one outcome/reply per inbound event). Both force tenant RLS. A database trigger verifies each mutation's event belongs to its user. Lifecycle changes increment the schedule version, invalidate controls, and suppress prior occurrences/outbound intents; snooze also changes the due instant and clears the scheduling marker. Worker updates are limited to reminder lifecycle/scheduling columns. See [reminder controls](reminder-controls.md).
+
 Migration 0012 adds bounded attempt sequences, retry/recovery deadlines and `delivery_recovery_audit`. Source uniqueness now includes the attempt number; a predecessor guard prevents invalid retry chains. The audit is tenant-scoped and operator resolutions are protected from runtime credentials. See [delivery recovery](delivery-recovery.md).
 
 Migration 0011 adds deployment-owned `whatsapp_templates` and extends `whatsapp_attempts` with owner-scoped outbound references, immutable message payloads and template references. See [reminder delivery](reminder-delivery.md).
@@ -73,7 +75,7 @@ erDiagram
 1. Transport inbox/outbox (done).
 2. Users, consent, roles/RLS and ownership test helpers.
 3. Plans (0006), action receipts, lists/items, reminders and reply intents (0008) are implemented. The test delivery ledger is implemented in 0009; live activation remains.
-4. Usage reservations (done in 0007); test send attempts and receipt reconciliation are implemented in 0009; one-time occurrences and outbound intents are implemented in 0010; templates, recurrence and automated retry/reconciliation remain.
+4. Usage reservations (0007), test send attempts/receipts (0009), one-time scheduling (0010), templates (0011), bounded retry/reconciliation (0012) and complete/cancel/snooze controls (0013) are implemented. Recurrence and live activation remain.
 5. Retention/export/deletion jobs and operations indexes.
 6. pgvector extension and memory schema after embedding dimensions are selected; calendar token envelopes separately.
 

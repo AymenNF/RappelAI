@@ -14,6 +14,7 @@ import {
 } from '../whatsapp/send.js';
 import { persistSendResult } from '../whatsapp/attempts.js';
 import { latestAttempt, expireRetry, auditDelivery } from '../whatsapp/retry.js';
+import { ensureReminderControl, controlButtons } from '../reminders/controls.js';
 
 /** Injectable test-number delivery path. No production runtime or billable-send authorization. */
 export class ReminderSender {
@@ -68,7 +69,7 @@ export class ReminderSender {
       // Lock the lifecycle row too: cancellation/version changes must serialize with authorization.
       const source = (
         await client.query(
-          `SELECT m.*,o.status AS occurrence_status,
+          `SELECT m.*,o.reminder_id,o.status AS occurrence_status,
         r.status AS reminder_status,
         (o.schedule_version=r.schedule_version AND o.original_due_at=r.due_at) AS current_schedule,
         (m.consent_grant_at=u.consent_at AND m.timezone_confirmed_at=u.timezone_confirmed_at
@@ -144,7 +145,14 @@ export class ReminderSender {
           phoneNumberId: user.business_phone_id as string,
           recipientId: user.sender_id as string,
         };
-        if (timing.open_window) message = { ...address, body: source.body as string };
+        if (timing.open_window)
+          message = {
+            ...address,
+            body: source.body as string,
+            buttons: controlButtons(
+              await ensureReminderControl(client, user.id, source.reminder_id),
+            ),
+          };
         else {
           if (!template || template.approval_status !== 'approved' || !timing.verified_template)
             throw new SendBlockedError('Approved template unavailable');

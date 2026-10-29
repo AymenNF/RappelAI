@@ -59,6 +59,25 @@ export async function scheduleRetry(
 ): Promise<void> {
   if (!Number.isInteger(minimumDelay) || minimumDelay < 0 || minimumDelay > 2147483647)
     throw new Error('Invalid retry delay');
+  // A transport result or operator reconciliation can arrive after a reminder was changed.
+  // Preserve the evidence, but never put its invalidated intent back into the retry queue.
+  const invalidated = await client.query(
+    `SELECT 1 FROM whatsapp_attempts a
+    JOIN outbound_messages m ON m.id=a.outbound_message_id AND m.user_id=a.user_id
+    JOIN reminder_occurrences o ON o.id=m.occurrence_id AND o.user_id=m.user_id
+    JOIN reminders r ON r.id=o.reminder_id AND r.user_id=o.user_id
+    WHERE a.id=$1 AND (m.status<>'pending' OR o.status<>'pending' OR r.status<>'pending'
+      OR o.schedule_version<>r.schedule_version OR o.original_due_at<>r.due_at)`,
+    [attempt.id],
+  );
+  if (invalidated.rowCount) {
+    await client.query(
+      "UPDATE whatsapp_attempts SET recovery_state='exhausted',retry_at=NULL,updated_at=clock_timestamp() WHERE id=$1",
+      [attempt.id],
+    );
+    await auditDelivery(client, attempt, 'reminder_invalidated');
+    return;
+  }
   const row = (
     await client.query(
       `WITH timing AS (SELECT clock_timestamp() AS at) UPDATE whatsapp_attempts SET

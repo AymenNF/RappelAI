@@ -26,7 +26,19 @@ export const templateMessage = z
       .strict(),
   })
   .strict();
-export const whatsappMessage = z.union([textMessage, templateMessage]);
+export const buttonMessage = textMessage
+  .extend({
+    body: z.string().min(1).max(1024),
+    buttons: z
+      .array(
+        z.object({ id: z.string().min(1).max(256), title: z.string().min(1).max(20) }).strict(),
+      )
+      .min(1)
+      .max(3)
+      .refine((buttons) => new Set(buttons.map((button) => button.id)).size === buttons.length),
+  })
+  .strict();
+export const whatsappMessage = z.union([textMessage, templateMessage, buttonMessage]);
 export type WhatsAppMessage = z.infer<typeof whatsappMessage>;
 export type SendResult =
   | { state: 'accepted'; providerMessageId: string }
@@ -124,7 +136,18 @@ export class WhatsAppCloudTransport implements WhatsAppTransport {
                     ],
                   },
                 }
-              : { type: 'text', text: { body: message.body, preview_url: false } }),
+              : 'buttons' in message
+                ? {
+                    type: 'interactive',
+                    interactive: {
+                      type: 'button',
+                      body: { text: message.body },
+                      action: {
+                        buttons: message.buttons.map((reply) => ({ type: 'reply', reply })),
+                      },
+                    },
+                  }
+                : { type: 'text', text: { body: message.body, preview_url: false } }),
           }),
         },
       );

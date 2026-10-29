@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { controlHelp } from '../reminders/controls.js';
 
 export const actionResult = z.discriminatedUnion('tool', [
   z
@@ -8,6 +9,10 @@ export const actionResult = z.discriminatedUnion('tool', [
       title: z.string(),
       dueAt: z.string().datetime({ offset: true }),
       timezone: z.string(),
+      reference: z
+        .string()
+        .regex(/^[a-f0-9]{16}$/)
+        .optional(),
     })
     .strict(),
   z
@@ -48,7 +53,7 @@ export function successReply(results: ActionResult[]): string {
       hourCycle: 'h23',
       timeZoneName: 'shortOffset',
     }).format(new Date(result.dueAt));
-    return `Saved reminder “${preview(result.title, 160)}” for ${local} (${result.timezone}).`;
+    return `Saved reminder “${preview(result.title, 160)}” for ${local} (${result.timezone}).${result.reference ? '\n' + controlHelp(result.reference) : ''}`;
   });
   if (results.some((result) => result.tool === 'create_reminder'))
     lines.push('Reminder delivery is not enabled yet.');

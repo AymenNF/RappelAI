@@ -175,6 +175,19 @@ test(
           assert.equal(reply.status, 'pending');
           assert.match(reply.body, /Added “milk”/);
           assert.match(reply.body, /Saved reminder/);
+          const control = (
+            await worker.query('SELECT * FROM reminder_controls WHERE reminder_id=$1', [
+              reminder.id,
+            ])
+          ).rows[0];
+          assert.equal(control.schedule_version, 1);
+          assert.match(reply.body, new RegExp(`DONE ${control.reference}`));
+          const saved = (
+            await worker.query('SELECT result FROM action_receipts WHERE reminder_id=$1', [
+              reminder.id,
+            ])
+          ).rows[0].result;
+          assert.equal(saved.reference, control.reference);
           assert.match(reply.body, /delivery is not enabled/);
           const work = (await worker.query('SELECT status FROM work_outbox')).rows[0];
           assert.equal(work.status, 'completed');

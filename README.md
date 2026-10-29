@@ -6,6 +6,8 @@ A WhatsApp-first personal assistant for reminders, lists, and eventually durable
 
 ## Start here
 
+M2-04 now adds complete, cancel and snooze commands, versioned reminder buttons, and atomic invalidation of old delivery work. See the [reminder controls guide](docs/reminder-controls.md) for examples and test coverage. Live sending remains disabled.
+
 For a beginner-friendly walkthrough, read the [illustrated project guide (PDF)](output/pdf/memorae-project-guide.pdf): examples, architecture, database, completed milestones and next steps through M1-08.
 
 1. [Local setup](docs/setup.md) — install, configure, run, and verify.

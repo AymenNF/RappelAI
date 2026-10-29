@@ -39,6 +39,15 @@ test('reply summaries show saved results and explicit delivery limits, bounded b
   );
   assert.ok(long.length < 4096);
   assert.ok(!long.includes('\uFFFD'));
+  const reminders = successReply(
+    Array.from({ length: 5 }, () => ({
+      ...reminder,
+      title: '😀'.repeat(100),
+      reference: '0123456789abcdef',
+    })),
+  );
+  assert.ok(reminders.length < 4096);
+  assert.match(reminders, /SNOOZE 0123456789abcdef 10m/);
   assert.match(
     successReply([
       {
