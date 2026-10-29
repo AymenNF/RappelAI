@@ -12,6 +12,7 @@ import { fixtureTransport } from '../modules/processing/fixture.js';
 import { UsageService } from '../modules/usage/service.js';
 import { ExecutionProcessor } from '../modules/processing/execution.js';
 import { ReceiptProcessor } from '../modules/whatsapp/receipts.js';
+import { ReminderScheduler } from '../modules/reminders/scheduler.js';
 
 // Local onboarding, optional offline planning and transactional execution; no provider sends.
 const config = readConfig();
@@ -28,6 +29,7 @@ const runner = new WorkRunner(queue, `worker-${randomUUID()}`);
 const usage = new UsageService(pool);
 const execution = new ExecutionProcessor();
 const receipts = new ReceiptProcessor();
+const scheduler = new ReminderScheduler(pool);
 const planner =
   config.MODEL_MODE === 'fixture'
     ? new PlanProcessor(pool, new ModelAdapter(fixtureTransport, config.MODEL_TIMEOUT_MS))
@@ -51,6 +53,7 @@ console.log(
     remoteModelEnabled: false,
     executionEnabled: true,
     receiptHandlingEnabled: true,
+    reminderSchedulingEnabled: true,
     whatsappSendingEnabled: false,
   }),
 );
@@ -80,6 +83,11 @@ try {
         const planned = planner ? await runner.runOne('action', planner, controller.signal) : false;
         const executed = await runner.runOne('execution', execution, controller.signal);
         if (!planned && !executed) break;
+      }
+      if (!stopping) {
+        const scheduled = await scheduler.sweep(100, controller.signal);
+        if (scheduled.examined)
+          console.log(JSON.stringify({ event: 'reminders_scheduled', ...scheduled }));
       }
       const result = await pool.query(
         "SELECT stage,status,count(*)::int AS count FROM work_outbox WHERE status <> 'completed' GROUP BY stage,status",

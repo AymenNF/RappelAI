@@ -23,7 +23,7 @@ Each action key derives from event ID, plan version, action index and tool kind.
 
 ## Reminders and lists
 
-`create_reminder` saves the title, UTC due instant, confirmed IANA timezone, source plan/action and immediate delivery mode. Status is `pending`. The reply says that the reminder was saved and explicitly states that delivery is not enabled. It does not claim a provider send or promise an operational scheduler. Recurrence, digest scheduling, occurrence materialization, cancellation/completion/snooze and due delivery remain M2 work.
+`create_reminder` saves the title, UTC due instant, confirmed IANA timezone, source plan/action and immediate delivery mode. Status is `pending`. The reply says that the reminder was saved and explicitly states that delivery is not enabled. It does not claim a provider send or promise an operational scheduler. M2-01 now materializes due one-time occurrences and outbound intents. Recurrence, digest scheduling, cancellation/completion/snooze and due delivery remain later M2 work. See [scheduling](reminder-scheduling.md).
 
 `add_list_item` resolves a list within the authenticated plan owner. Names use Unicode NFKC normalization, collapsed whitespace and lowercase comparison; the first display spelling is retained. There is no fuzzy matching: “Grocery” and “grocery” share a list, while “Groceries” is distinct. Identically named lists belonging to different users remain separate.
 

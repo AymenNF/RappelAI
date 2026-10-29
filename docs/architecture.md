@@ -26,7 +26,7 @@ flowchart LR
   AUTH --> S
 ```
 
-The API-to-inbox/outbox path, local identity/onboarding, tenant isolation, staged leased worker, model adapter and immutable plans exist today. Onboarding responses are stored without sending them. Redis is provisionable but unused. Local action execution and reply intents are implemented. Live model activation, scheduler, sender, authenticated API and dashboard remain planned. See [onboarding](onboarding.md) and [work processing](work-processing.md).
+The API-to-inbox/outbox path, local identity/onboarding, tenant isolation, staged leased worker, model adapter and immutable plans exist today. Onboarding responses are stored without sending them. Redis is provisionable but unused. Local action execution and reply intents are implemented. M2-01 one-time occurrence scheduling is implemented. Live model activation, the reminder sender, authenticated API and dashboard remain planned. See [onboarding](onboarding.md) and [work processing](work-processing.md).
 
 | Module     | Owns                                                        | Must not own                                  |
 | ---------- | ----------------------------------------------------------- | --------------------------------------------- |
@@ -79,7 +79,7 @@ The M1-06 executor uses the validated model plan saved before execution. On retr
 
 ## Scheduling and delivery (M2)
 
-PostgreSQL stores `next_due_at`. Every 30 seconds, a sweeper locks due rows with `next_due_at <= now()`, creates the uniquely keyed occurrence and durable outbound intent, and advances recurrence in the **same transaction**. No network send happens under the lock. Never mark an occurrence delivered merely because it was scheduled.
+M2-01 uses the existing one-time `reminders.due_at`, a schedule version and a `scheduled_at` materialization marker. Each worker cycle runs a bounded sweeper after identity/execution work; it locks users then due reminders, creates one occurrence/outbound intent and marks the reminder in the **same transaction**. The default 30-second poll delay is not a delivery guarantee. Identity changes suppress stale work. No network send happens under the lock, and scheduling does not mark delivery. Recurrence advancement remains future work. See [scheduling](reminder-scheduling.md).
 
 Prefer atomic claim-and-materialize transactions rather than persistent reminder claim flags. Where a longer lease is necessary, exclude active leases, reclaim expired ones, and fence updates. Delivery workers recheck `available_at`, cancellation/version, consent, quota, and the service window at actual send time. Exact-time reminders are not delayed to save cost. Digests and quiet-hour deferrals are explicit user preferences with a separately recorded promised delivery time.
 

@@ -1,3 +1,3 @@
 # Delivery boundary
 
-Planned in M1–M3: outbound intents, attempt ledger, template/window checks, budget reservations, provider adapter, unknown outcomes, receipt reduction and reconciliation. SQL uniqueness protects internal intents, not exactly-once network delivery.
+M2-01 creates one durable `outbound_messages` reminder intent per occurrence. No consumer sends these yet. M1-07's WhatsApp module separately implements test reply attempts and receipt reconciliation. M2-02 connects reminder intents to attempts, template/window checks and qualified send budgets; M2-03 adds audited unknown-outcome recovery. SQL uniqueness protects internal intents, not exactly-once network delivery. See [scheduling](../../../docs/reminder-scheduling.md).

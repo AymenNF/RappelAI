@@ -62,3 +62,5 @@ Real PostgreSQL tests use non-owner ingress/worker logins and disposable schemas
 M1-05 adds metered model dispatch. Budget/kill/rate/uncertainty denials defer the work by 60 seconds without consuming its claim attempt. Unknown provider usage retains its reservation until reconciliation. The worker runs usage recovery alongside lease recovery. See [usage controls](usage-controls.md).
 
 M1-06 consumes execution work in both model modes, including while paid planning is paused. Each worker cycle alternates planning and execution to allow later messages to advance after earlier commits. A completed execution means database effects and a reply intent were committed, not that a reply or reminder was delivered. See [action execution](action-execution.md).
+
+M2-01 runs a bounded due-reminder sweep after those stages. It uses short database transactions with user/reminder row locks and unique occurrence/intent keys, rather than a long-lived work lease. Its durable output is the new reminder outbound queue, not a completed send. STOP and changed identity settings suppress queued reminder work under the same user lock. See [scheduling](reminder-scheduling.md).

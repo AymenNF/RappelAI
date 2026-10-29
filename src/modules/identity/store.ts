@@ -120,6 +120,18 @@ export class IdentityProcessor {
         OR timezone_confirmed_at IS DISTINCT FROM $4::timestamptz)`,
       [user.id, !hasOnboarded(s), s.consent_at, s.timezone_confirmed_at],
     );
+    // The scheduler takes the same user lock. STOP/settings changes invalidate queued reminders too.
+    await client.query(
+      `WITH invalidated AS (
+        UPDATE outbound_messages SET status='suppressed',suppression_reason='identity_changed'
+        WHERE user_id=$1 AND status='pending'
+          AND ($2::boolean OR consent_grant_at IS DISTINCT FROM $3::timestamptz
+            OR timezone_confirmed_at IS DISTINCT FROM $4::timestamptz)
+        RETURNING occurrence_id
+      ) UPDATE reminder_occurrences o SET status='suppressed',suppression_reason='identity_changed'
+        FROM invalidated i WHERE o.id=i.occurrence_id AND o.user_id=$1 AND o.status='pending'`,
+      [user.id, !hasOnboarded(s), s.consent_at, s.timezone_confirmed_at],
+    );
     return {
       nextStage: transition.disposition === 'ready' ? 'action' : null,
       disposition: transition.disposition,
