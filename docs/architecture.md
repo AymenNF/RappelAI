@@ -4,6 +4,8 @@ Status: target system with implemented ingress, identity, tenant isolation, work
 
 ## Shape and boundaries
 
+M2-05 compiles a confirmed finite daily/weekly calendar into separate reminder rows, bounded to 366 dates. A proposal freezes exact instants, IANA zone, timezone-data version and the visible gap-forward/fold-first policy. Confirmation atomically attaches the original reminder, creates later dates and saves a command receipt under the work lease. The existing scheduler/delivery pipeline then handles each date; per-occurrence snooze/complete does not shift siblings. Whole-series cancellation suppresses pending children and their intents/retries. See [recurring reminders](recurring-reminders.md).
+
 M2-04 routes exact reminder commands and button IDs through the leased onboarding stage. A user-bound, version-bound control selects the reminder; one transaction changes its lifecycle/schedule, suppresses stale intents, exhausts their retries and saves a mutation receipt plus response. Creation/snooze confirmations expose a reference for subsequent commands. No model or external call is needed. The sender and scheduler share the user lock; old buttons cannot change a new schedule, while already authorized sends retain their evidence. See [reminder controls](reminder-controls.md).
 
 M2-03 adds a local recovery pass and an administrator reconciliation service around the shared WhatsApp attempt ledger. Recovery records expired dispatches as unknown; it does not resend them. Sender entry points authorize bounded retries after definite rejection or an evidenced operator decision. Every successor rechecks eligibility, and late contradictory acceptance pauses sending. See [delivery recovery](delivery-recovery.md).
@@ -85,11 +87,11 @@ The M1-06 executor uses the validated model plan saved before execution. On retr
 
 ## Scheduling and delivery (M2)
 
-M2-01 uses the existing one-time `reminders.due_at`, a schedule version and a `scheduled_at` materialization marker. Each worker cycle runs a bounded sweeper after identity/execution work; it locks users then due reminders, creates one occurrence/outbound intent and marks the reminder in the **same transaction**. The default 30-second poll delay is not a delivery guarantee. Identity changes suppress stale work. No network send happens under the lock, and scheduling does not mark delivery. Recurrence advancement remains future work. See [scheduling](reminder-scheduling.md).
+M2-01 uses the existing one-time `reminders.due_at`, a schedule version and a `scheduled_at` materialization marker. Each worker cycle runs a bounded sweeper after identity/execution work; it locks users then due reminders, creates one occurrence/outbound intent and marks the reminder in the **same transaction**. The default 30-second poll delay is not a delivery guarantee. Identity changes suppress stale work. No network send happens under the lock, and scheduling does not mark delivery. M2-05 precompiles finite daily/weekly series into independently scheduled reminder rows; no advancing cursor is required. See [scheduling](reminder-scheduling.md).
 
 Prefer atomic claim-and-materialize transactions rather than persistent reminder claim flags. Where a longer lease is necessary, exclude active leases, reclaim expired ones, and fence updates. Delivery workers recheck `available_at`, cancellation/version, consent, quota, and the service window at actual send time. Exact-time reminders are not delayed to save cost. Digests and quiet-hour deferrals are explicit user preferences with a separately recorded promised delivery time.
 
-Recurring rules retain IANA zone, local time, start date, supported RRULE and end. Define DST gap/fold behavior: proposed gap policy shifts forward by the gap; fold policy uses the first occurrence, once. Review that policy in UX and test it explicitly. Reject unsupported recurrence rules; never advance a local daily rule with UTC +24 hours.
+M2-05 stores a frozen IANA-zone calendar with daily/weekly cadence, inclusive end date and exact instants. Preview and confirmation make the gap-forward/fold-first policy explicit. Up to 366 dates are compiled using local calendar arithmetic; unsupported recurrence rules are rejected. See [recurring reminders](recurring-reminders.md).
 
 ## Delivery guarantees and unknown outcomes
 

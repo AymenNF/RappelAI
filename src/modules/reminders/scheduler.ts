@@ -1,5 +1,6 @@
 import type { Pool } from 'pg';
 import { hasOnboarded, type IdentityState } from '../identity/onboarding.js';
+import { controlHelp, ensureReminderControl } from './controls.js';
 
 export interface SweepResult {
   examined: number;
@@ -7,7 +8,7 @@ export interface SweepResult {
   suppressed: number;
 }
 
-/** One-time reminders only. Materialization is local database work, never a provider send. */
+/** Each reminder is one occurrence, including children of a finite recurring series. No provider I/O. */
 export class ReminderScheduler {
   constructor(private readonly pool: Pool) {}
 
@@ -36,7 +37,7 @@ export class ReminderScheduler {
       for (const user of users.rows) {
         if (result.examined >= limit) break;
         const due = await client.query(
-          `SELECT r.id,p.consent_grant_at=u.consent_at
+          `SELECT r.id,r.series_id,p.consent_grant_at=u.consent_at
             AND p.timezone_confirmed_at=u.timezone_confirmed_at AND p.timezone=u.timezone AS matches_snapshot
           FROM reminders r JOIN users u ON u.id=r.user_id
           JOIN action_plans p ON p.user_id=r.user_id AND p.event_id=r.source_event_id AND p.version=r.plan_version
@@ -71,15 +72,22 @@ export class ReminderScheduler {
             );
           }
           // Read the durable occurrence state on replay; never revive a suppressed intent.
+          const controls =
+            reminder.series_id && !suppressed
+              ? controlHelp(await ensureReminderControl(client, user.id, reminder.id))
+              : '';
           await client.query(
             `INSERT INTO outbound_messages(user_id,occurrence_id,body,available_at,consent_grant_at,timezone_confirmed_at,timezone,status,suppression_reason)
-            SELECT o.user_id,o.id,'Reminder: '||r.title,o.promised_due_at,p.consent_grant_at,p.timezone_confirmed_at,
+            SELECT o.user_id,o.id,'Reminder: '||r.title||CASE WHEN s.id IS NULL THEN '' ELSE
+              '. '||$2||'. These controls affect this occurrence only. Stop all: CANCEL SERIES '||s.reference END,
+              o.promised_due_at,p.consent_grant_at,p.timezone_confirmed_at,
               p.timezone,o.status,o.suppression_reason
             FROM reminders r JOIN reminder_occurrences o ON o.reminder_id=r.id AND o.user_id=r.user_id
               AND o.schedule_version=r.schedule_version AND o.original_due_at=r.due_at
             JOIN action_plans p ON p.user_id=r.user_id AND p.event_id=r.source_event_id AND p.version=r.plan_version
+            LEFT JOIN reminder_series s ON s.id=r.series_id AND s.user_id=r.user_id
             WHERE r.id=$1 ON CONFLICT(occurrence_id) DO NOTHING`,
-            [reminder.id],
+            [reminder.id, controls],
           );
           await client.query('UPDATE reminders SET scheduled_at=clock_timestamp() WHERE id=$1', [
             reminder.id,
