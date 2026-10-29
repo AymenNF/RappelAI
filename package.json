@@ -16,7 +16,7 @@
     "start:worker": "node dist/worker/main.js",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/unit/*.test.ts",
-    "test:integration": "tsx --test tests/integration/*.test.ts",
+    "test:integration": "tsx --test --test-concurrency=2 tests/integration/*.test.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run typecheck && npm test && npm run eval:validate && npm run build && npm run format:check",

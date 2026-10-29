@@ -4,6 +4,8 @@ import { WorkQueue, type WorkTransition } from '../processing/leases.js';
 import { applyReminderCommand, reminderCommand } from '../reminders/controls.js';
 import { seriesCommand } from '../reminders/recurrence.js';
 import { applySeriesCommand } from '../reminders/series.js';
+import { listCommand } from '../lists/commands.js';
+import { applyListCommand } from '../lists/management.js';
 import {
   CONSENT_NOTICE,
   CONSENT_VERSION,
@@ -69,6 +71,7 @@ export class IdentityProcessor {
         : null;
     const command = reminderCommand(event.payload);
     const recurrence = seriesCommand(text);
+    const list = listCommand(text);
     const transition = validTime
       ? onboard(user as IdentityState, command && !text ? 'reminder control' : text, sentAt, now)
       : {
@@ -78,7 +81,10 @@ export class IdentityProcessor {
           consentAction: null,
         };
     const s = transition.state;
-    if (recurrence && transition.disposition === 'ready') {
+    if (list && transition.disposition === 'ready') {
+      transition.reply = await applyListCommand(client, event.id, user.id, list);
+      transition.disposition = 'handled';
+    } else if (recurrence && transition.disposition === 'ready') {
       transition.reply = await applySeriesCommand(client, event.id, user.id, recurrence);
       transition.disposition = 'handled';
     } else if (command && transition.disposition === 'ready') {
@@ -133,6 +139,11 @@ export class IdentityProcessor {
       [user.id, !hasOnboarded(s), s.consent_at, s.timezone_confirmed_at],
     );
     // The scheduler takes the same user lock. STOP/settings changes invalidate queued reminders too.
+    await client.query(
+      `UPDATE list_choices SET status='invalidated' WHERE user_id=$1 AND status='pending'
+      AND ($2::boolean OR consent_grant_at IS DISTINCT FROM $3::timestamptz OR timezone_confirmed_at IS DISTINCT FROM $4::timestamptz)`,
+      [user.id, !hasOnboarded(s), s.consent_at, s.timezone_confirmed_at],
+    );
     await client.query(
       `UPDATE reminder_series SET status='suppressed',updated_at=clock_timestamp()
       WHERE user_id=$1 AND status IN ('proposed','active') AND ($2::boolean

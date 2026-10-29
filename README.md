@@ -6,6 +6,8 @@ A WhatsApp-first personal assistant for reminders, lists, and eventually durable
 
 ## Start here
 
+M2-06 adds paginated list reads, item editing/completion, typo/ambiguous-match clarification and stale-choice protection. See the [list management guide](docs/list-management.md).
+
 M2-05 adds finite daily/weekly recurrence with a five-date preview, explicit confirmation, daylight-saving handling and whole-series cancellation. See the [recurring reminders guide](docs/recurring-reminders.md).
 
 M2-04 now adds complete, cancel and snooze commands, versioned reminder buttons, and atomic invalidation of old delivery work. See the [reminder controls guide](docs/reminder-controls.md) for examples and test coverage. Live sending remains disabled.

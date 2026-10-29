@@ -4,6 +4,8 @@ The executable schema includes `schema_migrations`, `ingress_events`, `work_outb
 
 ## Current schema
 
+Migration 0015 adds list references/revisions, item revisions, forced-RLS `list_choices`, owner-constrained `list_choice_options`, and immutable `list_actions`. Triggers version additions and text/completion changes. Choice options bind exact list/item revisions; receipt triggers verify event ownership. Item positions remain append-only and protected from runtime edits. See [list management](list-management.md).
+
 Migration 0014 adds `reminder_series`, `reminder_series_actions` and owner-aware reminder membership with a unique nominal date per series. Proposals persist a bounded exact-date array, cadence/end, source version/instant, IANA zone, identity snapshots, DST policy and timezone-data version. Confirmation creates independent reminder rows atomically; each still has its own delivery occurrences and controls. This finite-series implementation replaces the target inline recurrence-fields design below for the supported daily/weekly subset. See [recurring reminders](recurring-reminders.md).
 
 Migration 0013 adds `reminder_controls` (one owner/identity/version-bound reference per reminder schedule) and immutable `reminder_mutations` (one outcome/reply per inbound event). Both force tenant RLS. A database trigger verifies each mutation's event belongs to its user. Lifecycle changes increment the schedule version, invalidate controls, and suppress prior occurrences/outbound intents; snooze also changes the due instant and clears the scheduling marker. Worker updates are limited to reminder lifecycle/scheduling columns. See [reminder controls](reminder-controls.md).

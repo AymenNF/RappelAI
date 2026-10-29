@@ -1,5 +1,7 @@
 # Reminder/list execution and reply intents (M1-06)
 
+M2-06 adds [list reading, editing and completion](list-management.md) with explicit choices and separate mutation receipts. Original add receipts remain immutable; pending add replies are suppressed when their item changes.
+
 Migration 0008 adds reminders, named lists, list items, action receipts, execution outcomes and reply intents. The worker now consumes the `execution` stage in both model modes. A saved plan can execute while paid planning is disabled or spending is paused: execution is a local database operation and makes no provider call.
 
 Stop old workers before migrating, then run the current build:
