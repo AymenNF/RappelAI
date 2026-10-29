@@ -1,10 +1,10 @@
 import type { Pool } from 'pg';
 import { z } from 'zod';
 import { CONSENT_VERSION } from '../identity/onboarding.js';
-import { boundedSend, textMessage, type WhatsAppTransport, type SendResult } from './send.js';
-import { lockProviderMessage, reconcileReceipts } from './receipts.js';
+import { boundedSend, textMessage, type WhatsAppTransport } from './send.js';
+import { persistSendResult } from './attempts.js';
 
-const policySchema = z
+export const testSendPolicySchema = z
   .object({
     enabled: z.boolean(),
     phoneNumberId: z.string().regex(/^\d{1,30}$/),
@@ -15,18 +15,18 @@ const policySchema = z
     timeoutMs: z.number().int().min(10).max(30000).default(10000),
   })
   .strict();
-export type TestSendPolicy = z.input<typeof policySchema>;
+export type TestSendPolicy = z.input<typeof testSendPolicySchema>;
 export class SendBlockedError extends Error {}
 
 /** Test-only orchestration. Not wired to the live worker until Meta/consent qualification. */
 export class TestReplySender {
-  private readonly policy: z.output<typeof policySchema>;
+  private readonly policy: z.output<typeof testSendPolicySchema>;
   constructor(
     private readonly pool: Pool,
     private readonly transport: WhatsAppTransport,
     policy: TestSendPolicy,
   ) {
-    this.policy = policySchema.parse(policy);
+    this.policy = testSendPolicySchema.parse(policy);
   }
 
   async send(eventId: string, signal?: AbortSignal): Promise<{ id: string; state: string }> {
@@ -139,37 +139,7 @@ export class TestReplySender {
     if (attempt.state === 'suppressed') return attempt;
     // Authorization is durable before I/O. Never resend a dispatching/unknown attempt, even after a crash.
     const result = await boundedSend(this.transport, message, this.policy.timeoutMs, signal);
-    await this.finish(attempt.id, result);
+    await persistSendResult(this.pool, attempt.id, result);
     return { id: attempt.id, state: result.state };
-  }
-
-  private async finish(id: string, result: SendResult): Promise<void> {
-    const client = await this.pool.connect();
-    try {
-      await client.query('BEGIN');
-      const attempt = (await client.query('SELECT * FROM whatsapp_attempts WHERE id=$1', [id]))
-        .rows[0];
-      if (result.state === 'accepted')
-        await lockProviderMessage(client, attempt.phone_number_id, result.providerMessageId);
-      await client.query(
-        `UPDATE whatsapp_attempts SET state=$2,provider_message_id=$3,error_code=$4,updated_at=clock_timestamp()
-        WHERE id=$1 AND state='dispatching'`,
-        [
-          id,
-          result.state,
-          result.state === 'accepted' ? result.providerMessageId : null,
-          result.state === 'accepted' ? null : result.code,
-        ],
-      );
-      if (result.state === 'accepted')
-        await reconcileReceipts(client, attempt.phone_number_id, result.providerMessageId);
-      await client.query('COMMIT');
-    } catch (error) {
-      await client.query('ROLLBACK');
-      // A lost/failed persistence leaves dispatching durable, which blocks automatic redispatch.
-      throw error;
-    } finally {
-      client.release();
-    }
   }
 }

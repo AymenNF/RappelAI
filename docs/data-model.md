@@ -4,6 +4,8 @@ The executable schema includes `schema_migrations`, `ingress_events`, `work_outb
 
 ## Current schema
 
+Migration 0011 adds deployment-owned `whatsapp_templates` and extends `whatsapp_attempts` with owner-scoped outbound references, immutable message payloads and template references. See [reminder delivery](reminder-delivery.md).
+
 | Table               | Purpose                                                  | Key invariants                                                                           |
 | ------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | `schema_migrations` | Applied migration history                                | Unique filename; SHA-256 checksum; advisory migration lock                               |

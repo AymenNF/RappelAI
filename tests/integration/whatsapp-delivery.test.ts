@@ -336,6 +336,7 @@ test(
           let body = '';
           await sender({
             send: async (message) => {
+              assert.ok('body' in message);
               body = message.body;
               return { state: 'accepted', providerMessageId: 'wamid.stop' };
             },

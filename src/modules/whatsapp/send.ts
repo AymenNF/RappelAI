@@ -8,17 +8,37 @@ export const textMessage = z
   })
   .strict();
 export type TextMessage = z.infer<typeof textMessage>;
+export const templateMessage = z
+  .object({
+    phoneNumberId: textMessage.shape.phoneNumberId,
+    recipientId: textMessage.shape.recipientId,
+    template: z
+      .object({
+        name: z.string().regex(/^[a-z0-9_]{1,512}$/),
+        languageCode: z.string().regex(/^[a-z]{2,3}(?:_[A-Z]{2})?$/),
+        // M2-02 supports one positional BODY text parameter and no headers/buttons.
+        bodyParameter: z
+          .string()
+          .min(1)
+          .max(1024)
+          .refine((value) => !/[\r\n\t]| {5}/.test(value)),
+      })
+      .strict(),
+  })
+  .strict();
+export const whatsappMessage = z.union([textMessage, templateMessage]);
+export type WhatsAppMessage = z.infer<typeof whatsappMessage>;
 export type SendResult =
   | { state: 'accepted'; providerMessageId: string }
   | { state: 'rejected' | 'unknown'; code: string };
 export interface WhatsAppTransport {
-  send(message: TextMessage, signal: AbortSignal): Promise<SendResult>;
+  send(message: WhatsAppMessage, signal: AbortSignal): Promise<SendResult>;
 }
 
 // Bound even an injected transport that ignores cancellation. Late completions cannot change state.
 export async function boundedSend(
   transport: WhatsAppTransport,
-  message: TextMessage,
+  message: WhatsAppMessage,
   timeoutMs: number,
   signal?: AbortSignal,
 ): Promise<SendResult> {
@@ -62,8 +82,8 @@ export class WhatsAppCloudTransport implements WhatsAppTransport {
     if (!accessToken || /[\r\n]/.test(accessToken) || !/^v\d{1,3}\.0$/.test(version))
       throw new Error('Invalid WhatsApp transport configuration');
   }
-  async send(input: TextMessage, signal: AbortSignal): Promise<SendResult> {
-    const parsed = textMessage.safeParse(input);
+  async send(input: WhatsAppMessage, signal: AbortSignal): Promise<SendResult> {
+    const parsed = whatsappMessage.safeParse(input);
     if (!parsed.success) return { state: 'rejected', code: 'invalid_message' };
     const message = parsed.data;
     if (signal.aborted) return { state: 'unknown', code: 'cancelled' };
@@ -82,8 +102,21 @@ export class WhatsAppCloudTransport implements WhatsAppTransport {
             messaging_product: 'whatsapp',
             recipient_type: 'individual',
             to: message.recipientId,
-            type: 'text',
-            text: { body: message.body, preview_url: false },
+            ...('template' in message
+              ? {
+                  type: 'template',
+                  template: {
+                    name: message.template.name,
+                    language: { code: message.template.languageCode },
+                    components: [
+                      {
+                        type: 'body',
+                        parameters: [{ type: 'text', text: message.template.bodyParameter }],
+                      },
+                    ],
+                  },
+                }
+              : { type: 'text', text: { body: message.body, preview_url: false } }),
           }),
         },
       );

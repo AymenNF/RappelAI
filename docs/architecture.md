@@ -1,8 +1,10 @@
 # Architecture and system design
 
-Status: target system with implemented ingress, identity, tenant isolation, work leases, persisted plans, usage controls and local action execution. Updated 2026-10-27. Assumptions: solo developer, small private beta, WhatsApp first, TypeScript, one region, managed PostgreSQL at launch. Country, hosting, languages and provider choices remain open in [decisions](decisions/README.md).
+Status: target system with implemented ingress, identity, tenant isolation, work leases, persisted plans, usage controls, local action execution, due scheduling and tested reminder delivery. Live outbound remains disabled. Updated 2026-10-28. Assumptions: solo developer, small private beta, WhatsApp first, TypeScript, one region, managed PostgreSQL at launch. Country, hosting, languages and provider choices remain open in [decisions](decisions/README.md).
 
 ## Shape and boundaries
+
+The current reminder path is saved plan -> reminder -> occurrence + outbound intent -> durable send attempt -> provider acceptance -> delivery receipts. M2-02 implements the last stages through an injectable test service and the existing receipt worker. It does not activate live sending. Template versions and selected message payloads are persisted, while network calls run outside database transactions. See [reminder delivery](reminder-delivery.md).
 
 Use a **modular monolith in one repository**, deployed as an API and one or more workers. This preserves database transactions and simple debugging while allowing ingress and background load to scale separately. Split services only when measurements or team ownership justify it.
 

@@ -93,6 +93,8 @@ The API image builds with `docker build -t memorae-api .`; the worker uses the s
 
 ## Troubleshooting
 
+M2-02 adds migration 0011 for the versioned template registry and reminder attempt snapshots. Stop older workers before migrating, then rebuild/restart. The ordinary worker still cannot send WhatsApp messages; reminder dispatch is an injectable test service. See [reminder delivery](reminder-delivery.md) for its gates, template administration and inspection queries.
+
 | Symptom                         | Action                                                                               |
 | ------------------------------- | ------------------------------------------------------------------------------------ |
 | Docker not recognized           | Install/start Docker Desktop; open a new terminal; verify `docker compose version`   |

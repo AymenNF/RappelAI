@@ -98,3 +98,68 @@ test('receipt reduction never regresses read/delivered; failure outranks sent an
   assert.equal(reduceDelivery('failed', ['delivered']), 'delivered');
   assert.equal(reduceDelivery('none', ['deleted', 'constructor', 'toString']), 'none');
 });
+
+test('Cloud adapter sends a single positional body template with its exact approved name and locale', async () => {
+  const template = {
+    phoneNumberId: message.phoneNumberId,
+    recipientId: message.recipientId,
+    template: {
+      name: 'reminder_v1',
+      languageCode: 'en_US',
+      bodyParameter: 'Reminder: Call dentist',
+    },
+  };
+  const transport = new WhatsAppCloudTransport('test-secret', 'v23.0', async (url, init) => {
+    assert.equal(url, 'https://graph.facebook.com/v23.0/12345/messages');
+    assert.equal(init?.redirect, 'error');
+    assert.deepEqual(JSON.parse(init?.body as string), {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: template.recipientId,
+      type: 'template',
+      template: {
+        name: 'reminder_v1',
+        language: { code: 'en_US' },
+        components: [
+          { type: 'body', parameters: [{ type: 'text', text: 'Reminder: Call dentist' }] },
+        ],
+      },
+    });
+    return ok();
+  });
+  assert.equal((await boundedSend(transport, template, 1000)).state, 'accepted');
+});
+
+test('invalid template shapes never reach the network or fall back to text', async () => {
+  let calls = 0;
+  const transport = new WhatsAppCloudTransport('secret', 'v23.0', async () => {
+    calls++;
+    return ok();
+  });
+  const template = { name: 'reminder_v1', languageCode: 'en_US', bodyParameter: 'Call dentist' };
+  for (const invalid of [
+    { ...template, name: '../invalid' },
+    { ...template, languageCode: 'en-US' },
+    { ...template, bodyParameter: '' },
+    { ...template, bodyParameter: 'x'.repeat(1025) },
+    { ...template, bodyParameter: 'line\nbreak' },
+    { ...template, bodyParameter: 'tab\ttext' },
+    { ...template, bodyParameter: 'five     spaces' },
+    { ...template, extra: 'unapproved' },
+  ]) {
+    assert.equal(
+      (
+        await transport.send(
+          {
+            phoneNumberId: message.phoneNumberId,
+            recipientId: message.recipientId,
+            template: invalid,
+          },
+          new AbortController().signal,
+        )
+      ).state,
+      'rejected',
+    );
+  }
+  assert.equal(calls, 0);
+});
