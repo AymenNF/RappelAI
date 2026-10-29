@@ -1,3 +1,4 @@
+import { consumeQuota } from '../quotas/service.js';
 import type { Pool } from 'pg';
 import { z } from 'zod';
 import { CONSENT_VERSION } from '../identity/onboarding.js';
@@ -118,6 +119,10 @@ export class TestReplySender {
         recipientId: user.sender_id,
         body,
       });
+      if (!reason) {
+        const denied = await consumeQuota(client, user.id, 'send');
+        if (denied) throw new SendBlockedError(`Send quota: ${denied}; see QUOTA for limits`);
+      }
       attempt = (
         await client.query(
           `INSERT INTO whatsapp_attempts(user_id,event_id,identity_event_id,reply_event_id,

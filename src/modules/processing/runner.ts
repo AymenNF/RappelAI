@@ -12,7 +12,11 @@ export class PermanentWorkError extends Error {}
 export class DeferredWorkError extends Error {
   constructor(
     public readonly code:
-      'usage_paused' | 'budget_exhausted' | 'usage_unresolved' | 'rate_unconfigured',
+      | 'usage_paused'
+      | 'budget_exhausted'
+      | 'usage_unresolved'
+      | 'rate_unconfigured'
+      | 'quota_exhausted',
   ) {
     super(code);
   }

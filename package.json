@@ -32,7 +32,8 @@
     "delivery:control": "tsx scripts/delivery-control.ts",
     "eval:validate": "tsx evals/validate.ts",
     "eval:run": "tsx evals/run.ts",
-    "eval": "tsx evals/score.ts"
+    "eval": "tsx evals/score.ts",
+    "quota:control": "tsx scripts/quota-control.ts"
   },
   "dependencies": {
     "@js-temporal/polyfill": "0.5.1",

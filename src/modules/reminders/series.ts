@@ -1,3 +1,4 @@
+import { inventoryDenial } from '../quotas/service.js';
 import { createHash } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { hasOnboarded, type IdentityState } from '../identity/onboarding.js';
@@ -70,6 +71,14 @@ export async function applySeriesCommand(
           reply = `That rule cannot repeat this reminder. Choose an end date including at least two occurrences, within 365 days of the first. A first reminder in a repeated clock hour must select the earlier offset.\n${help}`;
         }
         if (schedule) {
+          const denied = await inventoryDenial(client, userId, schedule.length - 1, 0);
+          if (denied) {
+            outcome = 'invalid';
+            reply = denied;
+            schedule = undefined;
+          }
+        }
+        if (schedule) {
           const row = (
             await client.query(
               `INSERT INTO reminder_series(user_id,source_reminder_id,source_version,source_due_at,cadence,until_date,timezone,consent_grant_at,timezone_confirmed_at,tzdb_version,schedule)
@@ -120,7 +129,19 @@ export async function applySeriesCommand(
             [series.source_reminder_id, userId, series.id],
           )
         ).rows[0];
-        if (root) {
+        const denied = root
+          ? await inventoryDenial(
+              client,
+              userId,
+              (series.schedule as ScheduledDate[]).length - 1,
+              0,
+            )
+          : null;
+        if (denied) {
+          outcome = 'invalid';
+          reply = denied;
+        }
+        if (root && !denied) {
           const schedule = series.schedule as ScheduledDate[];
           // One bounded INSERT compiles the finite calendar into independently controllable reminders.
           const children = schedule.slice(1).map((s) => ({

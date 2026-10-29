@@ -6,6 +6,7 @@ import { readConfig } from '../../src/config/env.js';
 import { verifySignature } from '../../src/modules/whatsapp/signature.js';
 import { extractEvents, type IngressEvent } from '../../src/modules/whatsapp/events.js';
 import type { IngressStore } from '../../src/db/ingress-store.js';
+import { IngressCapacityError, IngressBatchError } from '../../src/db/ingress-store.js';
 
 const secret = 'local-test-secret-only-32-characters';
 const config = readConfig({
@@ -58,6 +59,31 @@ class MemoryTestStore implements IngressStore {
     return { inserted: this.rows.size - before };
   }
 }
+
+test('signed overload returns retryable capacity or batch-size errors without acknowledging storage', async (t) => {
+  for (const [error, status] of [
+    [new IngressCapacityError(), 429],
+    [new IngressBatchError(), 413],
+  ] as const) {
+    const app = buildApp(config, {
+      ready: async () => true,
+      persist: async () => {
+        throw error;
+      },
+    });
+    t.after(() => app.close());
+    const body = JSON.stringify(payload());
+    const response = await app.inject({
+      method: 'POST',
+      url: '/webhooks/whatsapp',
+      headers: signed(body),
+      payload: body,
+    });
+    assert.equal(response.statusCode, status);
+    if (status === 429) assert.equal(response.headers['retry-after'], '60');
+    assert.equal(response.json().accepted, undefined);
+  }
+});
 
 test('HMAC uses the original bytes, rejects tampering and malformed signatures', () => {
   const body = JSON.stringify(payload(), null, 2);

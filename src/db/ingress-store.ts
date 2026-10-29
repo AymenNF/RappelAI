@@ -1,5 +1,9 @@
 import type { Pool } from 'pg';
 import type { IngressEvent } from '../modules/whatsapp/events.js';
+import { reminderCommand } from '../modules/reminders/controls.js';
+
+export class IngressCapacityError extends Error {}
+export class IngressBatchError extends Error {}
 
 export interface IngressStore {
   persist(events: IngressEvent[]): Promise<{ inserted: number }>;
@@ -7,7 +11,13 @@ export interface IngressStore {
 }
 
 export class PostgresIngressStore implements IngressStore {
-  constructor(private readonly pool: Pool) {}
+  constructor(
+    private readonly pool: Pool,
+    private readonly maxPending = 10000,
+  ) {
+    if (!Number.isInteger(maxPending) || maxPending < 1 || maxPending > 100000)
+      throw new Error('Invalid ingress capacity');
+  }
 
   async ready(): Promise<boolean> {
     try {
@@ -20,6 +30,7 @@ export class PostgresIngressStore implements IngressStore {
   }
 
   async persist(events: IngressEvent[]): Promise<{ inserted: number }> {
+    if (events.length > 1000) throw new IngressBatchError('Webhook event batch exceeds 1000');
     if (events.length === 0) return { inserted: 0 };
     const client = await this.pool.connect();
     try {
@@ -35,6 +46,46 @@ export class PostgresIngressStore implements IngressStore {
       ].sort();
       for (const stream of streams) {
         await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [stream]);
+      }
+      const normal = events.filter((e) => {
+        if (e.kind === 'delivery.status') return false;
+        const command = reminderCommand(e.payload);
+        const stop =
+          e.payload.type === 'text' &&
+          typeof e.payload.text === 'object' &&
+          e.payload.text !== null &&
+          typeof (e.payload.text as { body?: unknown }).body === 'string' &&
+          (e.payload.text as { body: string }).body.trim().toUpperCase() === 'STOP';
+        return (
+          !stop &&
+          !(
+            command &&
+            command.action !== 'invalid' &&
+            ['cancel', 'complete'].includes(command.action)
+          )
+        );
+      });
+      if (normal.length) {
+        // Shared across API processes. Replay needs no capacity; receipts and safety controls drain work.
+        await client.query(
+          "SELECT pg_advisory_xact_lock(hashtextextended(current_schema()||':ingress-capacity',0))",
+        );
+        const fresh = (
+          await client.query(
+            'SELECT count(*)::integer AS n FROM (SELECT DISTINCT unnest($1::text[]) AS key) x WHERE NOT EXISTS(SELECT 1 FROM ingress_events WHERE event_key=x.key)',
+            [normal.map((e) => e.eventKey)],
+          )
+        ).rows[0].n;
+        if (fresh) {
+          const pending = (
+            await client.query(
+              "SELECT count(*)::integer AS n FROM (SELECT id FROM work_outbox WHERE status<>'completed' AND stage<>'receipt' LIMIT $1) q",
+              [this.maxPending],
+            )
+          ).rows[0].n;
+          if (pending + fresh > this.maxPending)
+            throw new IngressCapacityError('Inbound queue capacity reached');
+        }
       }
       // One statement for the batch; the inbox and durable work intent commit together.
       const result = await client.query(

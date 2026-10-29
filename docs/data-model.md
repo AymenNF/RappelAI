@@ -4,6 +4,8 @@ The executable schema includes `schema_migrations`, `ingress_events`, `work_outb
 
 ## Current schema
 
+Migration 0017 adds administrator-owned quota policy/audit, tenant-isolated account blocks and counters, immutable request admissions with event-owner validation, and shared global attempt counters. See [quotas](quotas.md).
+
 Migration 0016 adds forced-RLS `delivery_preferences`, immutable delivery previews in `delivery_choices`, and per-event `delivery_preference_actions`. Deferred reminders store a separate promised instant and confirmed choice reference; occurrence constraints permit explicit deferral while requiring immediate promises to equal the original due time. Outbound availability uses the saved promise. See [delivery preferences](delivery-preferences.md).
 
 Migration 0015 adds list references/revisions, item revisions, forced-RLS `list_choices`, owner-constrained `list_choice_options`, and immutable `list_actions`. Triggers version additions and text/completion changes. Choice options bind exact list/item revisions; receipt triggers verify event ownership. Item positions remain append-only and protected from runtime edits. See [list management](list-management.md).

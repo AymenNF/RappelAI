@@ -6,6 +6,8 @@ A WhatsApp-first personal assistant for reminders, lists, and eventually durable
 
 ## Start here
 
+M3-01 adds request/model/send quotas, abuse blocking, inventory caps and a user-facing `QUOTA` command. See [quotas and abuse controls](docs/quotas.md).
+
 M2-07 adds digest-slot and quiet-hour preferences with explicit per-reminder previews and confirmation. Exact-time reminders remain unchanged. Digest entries are sent individually. See the [delivery preferences guide](docs/delivery-preferences.md).
 
 M2-06 adds paginated list reads, item editing/completion, typo/ambiguous-match clarification and stale-choice protection. See the [list management guide](docs/list-management.md).

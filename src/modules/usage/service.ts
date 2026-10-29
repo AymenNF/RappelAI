@@ -1,3 +1,4 @@
+import { consumeQuota } from '../quotas/service.js';
 import type { Pool, PoolClient } from 'pg';
 import { z } from 'zod';
 import { CONSENT_VERSION } from '../identity/onboarding.js';
@@ -229,6 +230,8 @@ export class UsageService {
         )
       ).rows[0].period;
       if (row.period !== period) throw new DeferredWorkError('budget_exhausted');
+      if (await consumeQuota(client, row.user_id, 'model'))
+        throw new DeferredWorkError('quota_exhausted');
       const changed = await client.query(
         `UPDATE usage_reservations SET state='dispatched',dispatched_at=clock_timestamp() WHERE id=$1
         AND EXISTS(SELECT 1 FROM work_outbox WHERE id=$2 AND lease_token=$3 AND lease_until>clock_timestamp() AND status='leased') RETURNING id`,

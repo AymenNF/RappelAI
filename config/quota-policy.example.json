@@ -1,0 +1,12 @@
+{
+  "requests_minute": 60,
+  "requests_day": 1000,
+  "model_minute": 20,
+  "model_day": 100,
+  "send_minute": 30,
+  "send_day": 200,
+  "global_model_day": 10000,
+  "global_send_day": 20000,
+  "pending_reminders": 500,
+  "list_items": 5000
+}

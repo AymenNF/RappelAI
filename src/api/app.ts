@@ -1,6 +1,7 @@
 import Fastify, { LogController } from 'fastify';
 import type { Config } from '../config/env.js';
 import type { IngressStore } from '../db/ingress-store.js';
+import { IngressCapacityError, IngressBatchError } from '../db/ingress-store.js';
 import { verifySignature } from '../modules/whatsapp/signature.js';
 import { extractEvents } from '../modules/whatsapp/events.js';
 
@@ -56,7 +57,14 @@ export function buildApp(config: Config, store: IngressStore) {
           'webhook persisted',
         );
         return reply.code(200).send({ accepted: true });
-      } catch {
+      } catch (error) {
+        if (error instanceof IngressCapacityError)
+          return reply
+            .header('Retry-After', '60')
+            .code(429)
+            .send({ error: 'queue_capacity', retryAfterSeconds: 60 });
+        if (error instanceof IngressBatchError)
+          return reply.code(413).send({ error: 'too_many_events' });
         // Returning 200 before durable storage would lose the message. Never log its body.
         request.log.error({ requestId: request.id }, 'webhook persistence failed');
         return reply.code(503).send({ error: 'storage_unavailable' });

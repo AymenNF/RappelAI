@@ -163,7 +163,12 @@ export class WorkQueue {
 
   async defer(
     lease: WorkLease,
-    code: 'usage_paused' | 'budget_exhausted' | 'usage_unresolved' | 'rate_unconfigured',
+    code:
+      | 'usage_paused'
+      | 'budget_exhausted'
+      | 'usage_unresolved'
+      | 'rate_unconfigured'
+      | 'quota_exhausted',
   ): Promise<boolean> {
     const result = await this.pool.query(
       `UPDATE work_outbox SET status='pending',attempts=GREATEST(0,attempts-1),

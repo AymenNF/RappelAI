@@ -57,4 +57,4 @@ Stop older workers, run `npm run db:migrate`, rebuild and restart. No new creden
 
 Seven new unit tests cover syntax, precision, daytime/overnight boundaries, DST folds/gaps, non-hour offsets, leap days and skipped dates. Fifteen new database scenarios cover settings/readback, immutable previews and promises, replay, competing confirmation, stale/expired/foreign choices, lease rollback, STOP/timezone reset, snooze/recurrence interactions, expiry while waiting for locks, scheduler replay, mocked sender timing and tenant/grant/FK isolation.
 
-Next is **M3-01: abuse, rate and plan limits with clear quota messages**. External Meta eligibility/template setup, replacement consent and live model qualification are still prerequisites to a real-user pilot. The beginner PDF remains the historical M1-08 snapshot.
+M3-01 now implements [abuse controls and quotas](quotas.md). Next is **M3-02: export, deletion and retention**. External Meta eligibility/template setup, replacement consent and live model qualification are still prerequisites to a real-user pilot. The beginner PDF remains the historical M1-08 snapshot.

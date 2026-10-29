@@ -1,3 +1,4 @@
+import { consumeQuota } from '../quotas/service.js';
 import type { Pool } from 'pg';
 import { z } from 'zod';
 import { hasOnboarded, type IdentityState } from '../identity/onboarding.js';
@@ -174,6 +175,10 @@ export class ReminderSender {
         message = parsed.data;
       }
       if (signal?.aborted) throw new SendBlockedError('Dispatch cancelled');
+      if (!reason) {
+        const denied = await consumeQuota(client, user.id, 'send');
+        if (denied) throw new SendBlockedError(`Send quota: ${denied}; see QUOTA for limits`);
+      }
       attempt = (
         await client.query(
           `INSERT INTO whatsapp_attempts(user_id,outbound_message_id,phone_number_id,recipient_id,

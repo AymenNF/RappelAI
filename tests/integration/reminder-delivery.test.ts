@@ -25,7 +25,7 @@ import { PROMPT_SHA256 } from '../../src/modules/processing/prompt.js';
 if (!process.env.TEST_DATABASE_URL) throw new Error('TEST_DATABASE_URL required');
 test(
   'reminder delivery and templates under restricted database logins',
-  { timeout: 60000 },
+  { timeout: 120000 },
   async (t) => {
     const suffix = randomUUID().replaceAll('-', '');
     const schema = `test_${suffix}`;

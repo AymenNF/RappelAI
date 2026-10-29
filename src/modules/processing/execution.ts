@@ -1,3 +1,4 @@
+import { inventoryDenial } from '../quotas/service.js';
 import type { PoolClient } from 'pg';
 import { decision } from '../../contracts/decision.js';
 import { hasOnboarded, type IdentityState } from '../identity/onboarding.js';
@@ -69,6 +70,19 @@ export class ExecutionProcessor implements WorkHandler<null> {
       reason = 'digest_unavailable';
       body =
         'Automatic digest selection is not supported. Save an exact-time reminder first, set DIGEST AT HH:MM, then use DELIVER <reference> DIGEST to review and confirm its delivery time. Nothing from this request was saved.';
+    }
+    if (outcome === 'executed') {
+      const denied = await inventoryDenial(
+        client,
+        user.id,
+        parsed.data.calls.filter((c) => c.tool === 'create_reminder').length,
+        parsed.data.calls.filter((c) => c.tool === 'add_list_item').length,
+      );
+      if (denied) {
+        outcome = 'unsupported';
+        reason = 'inventory_quota';
+        body = denied;
+      }
     }
     if (outcome === 'executed') {
       // Validate normalized names before any mutation; the entire plan is all-or-nothing.

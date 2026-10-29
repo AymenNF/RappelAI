@@ -1,3 +1,4 @@
+import { admitRequest } from '../quotas/service.js';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { WorkQueue, type WorkTransition } from '../processing/leases.js';
@@ -75,14 +76,30 @@ export class IdentityProcessor {
     const recurrence = seriesCommand(text);
     const list = listCommand(text);
     const preference = preferenceCommand(text);
-    const transition = validTime
-      ? onboard(user as IdentityState, command && !text ? 'reminder control' : text, sentAt, now)
-      : {
-          state: user as IdentityState,
-          disposition: 'blocked' as const,
-          reply: 'Invalid message timestamp. Please send your message again.',
-          consentAction: null,
-        };
+    const admission = validTime
+      ? await admitRequest(client, event.id, user.id, text, event.payload)
+      : null;
+    const transition =
+      validTime && admission && !admission.allowed
+        ? {
+            state: user as IdentityState,
+            disposition: 'blocked' as const,
+            reply: admission.reply_text,
+            consentAction: null,
+          }
+        : validTime
+          ? onboard(
+              user as IdentityState,
+              command && !text ? 'reminder control' : text,
+              sentAt,
+              now,
+            )
+          : {
+              state: user as IdentityState,
+              disposition: 'blocked' as const,
+              reply: 'Invalid message timestamp. Please send your message again.',
+              consentAction: null,
+            };
     const s = transition.state;
     if (preference && transition.disposition === 'ready') {
       transition.reply = await applyPreferenceCommand(client, event.id, user.id, preference);
