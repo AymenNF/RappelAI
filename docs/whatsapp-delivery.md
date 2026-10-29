@@ -26,7 +26,7 @@ The attempt states are:
 | `unknown`     | Timeout, cancellation, network error, ambiguous HTTP response or malformed success.                            |
 | `suppressed`  | Identity/window checks prevented dispatch.                                                                     |
 
-There is one attempt per source event in M1-07. None of these states automatically redispatch, including rejection. `dispatching` and `unknown` block later plan replies for that user. Undispatched earlier pending plan replies also preserve reply order. Onboarding control replies may bypass plan backlog so STOP can be confirmed. Retry classification, audited reconciliation, and additional attempts belong to M2-03. Do not clear attempt rows to force a resend.
+There is one attempt per source event in M1-07. None of these states automatically redispatch, including rejection. `dispatching` and `unknown` block later plan replies for that user. Undispatched earlier pending plan replies also preserve reply order. Onboarding control replies may bypass plan backlog so STOP can be confirmed. M2-03 now extends this baseline with retry classification, audited reconciliation and additional attempts; see [delivery recovery](delivery-recovery.md). Do not clear attempt rows to force a resend.
 
 ## Receipt evidence
 
@@ -40,7 +40,7 @@ The pending/suppressed state on `reply_intents` expresses eligibility, not deliv
 
 ## Verification and remaining activation work
 
-M2-01 scheduling and M2-02 reminder dispatch/template selection are now implemented locally; see [reminder delivery](reminder-delivery.md). Both reply and reminder paths share the transport, acceptance persistence and receipt reducer. Actual template approval, billable send reservations, live activation, automatic retries and unknown-send reconciliation remain pending.
+M2-01 scheduling and M2-02 reminder dispatch/template selection are now implemented locally; see [reminder delivery](reminder-delivery.md). Both reply and reminder paths share the transport, acceptance persistence and receipt reducer. M2-03 adds bounded retries and audited unknown-send reconciliation. Actual template approval, billable send reservations and live activation remain pending.
 
 Unit tests cover the wire request, validation, error classification, bounded responses, timeouts and status reduction. Restricted-login PostgreSQL tests cover competing senders, replay, early/reordered receipts, rollback, uncertain sends, persistence failure, pause/allowlist/window/consent gates, onboarding and STOP, in-flight revocation, ordered replies, tenant isolation and mismatched addresses.
 

@@ -93,6 +93,8 @@ The API image builds with `docker build -t memorae-api .`; the worker uses the s
 
 ## Troubleshooting
 
+M2-03 adds migration 0012. Stop older workers, migrate, rebuild and restart so every sender understands attempt sequences. The ordinary worker now recovers expired dispatches and retry horizons without sending messages. Use `npm run delivery:control -- status` with the administrator connection for held work; see [recovery](delivery-recovery.md) before recording an operator decision.
+
 M2-02 adds migration 0011 for the versioned template registry and reminder attempt snapshots. Stop older workers before migrating, then rebuild/restart. The ordinary worker still cannot send WhatsApp messages; reminder dispatch is an injectable test service. See [reminder delivery](reminder-delivery.md) for its gates, template administration and inspection queries.
 
 | Symptom                         | Action                                                                               |

@@ -1,4 +1,4 @@
-# Local setup and M2-02 verification — 2026-10-28
+# Local setup and M2-03 verification — 2026-10-29
 
 ## Completed
 
@@ -6,11 +6,11 @@
 - Started PostgreSQL 16 locally; health check passes on localhost:5432, with a persistent named volume.
 - Applied migrations 0001, 0002 and 0003. Re-running applied migrations is a no-op; checksum tracking remains intact.
 - Applied migration 0004 and provisioned separate ingress/worker/tenant local logins. API readiness succeeds under the restricted ingress login; credential provisioning also passes on rerun.
-- All 99 integration tests/subtests pass, including actual non-owner logins, forced RLS on a non-superuser owner, tenant CRUD isolation, denied transport/audit mutation, cross-owner references, and transaction/pool cleanup.
+- All 113 integration tests/subtests pass, including actual non-owner logins, forced RLS on a non-superuser owner, tenant CRUD isolation, denied transport/audit mutation, cross-owner references, and transaction/pool cleanup.
 - Real PostgreSQL tests pass: concurrent webhook deduplication, atomic rollback, isolated identities, ordered onboarding, consent/token handling, revocation, service-window behavior and future-timestamp rejection.
 - Local HTTP smoke passes with the actual PostgreSQL store: liveness and readiness return 200; the temporary server closes afterward.
-- Built the API Docker image `memorae-local:dev` during initial setup. It has not been rebuilt for M1-02 through M2-02; the current TypeScript production build passes.
-- Unit suite contains 51 tests; 60 agent-reviewed evaluation cases validate. TypeScript, build and formatting checks pass.
+- Built the API Docker image `memorae-local:dev` during initial setup. It has not been rebuilt for M1-02 through M2-03; the current TypeScript production build passes.
+- Unit suite contains 54 tests; 60 agent-reviewed evaluation cases validate. TypeScript, build and formatting checks pass.
 - Exercised the synthetic onboarding chat against local PostgreSQL. No WhatsApp sends or model calls were made.
 
 - Applied migration 0005; rerun is a no-op. Verified the production TypeScript worker build starts against the restricted local worker login and exits through its SIGTERM handler.
@@ -30,6 +30,10 @@
 
 ## Current runtime behavior
 
+Applied migration 0012 locally; rerunning migrations is a no-op. API smoke returns liveness/readiness 200. The compiled worker starts/stops in disabled and fixture model modes with `deliveryRecoveryEnabled: true` and `whatsappSendingEnabled: false`. The administrator delivery-status command returns an empty queue, and spending remains paused with zero caps. No worker was left running and no live sends or paid calls were made. `npm run check`, the full integration suite and formatting checks pass.
+
+M2-03 adds 13 PostgreSQL recovery scenarios plus their parent test, bringing the full integration suite to 113 tests/subtests. Three new unit tests bring the total to 54, with 60 evaluation cases still validated. Coverage includes concurrent bounded retries, fixed horizons and provider delays, held unknown sends, operator evidence/addresses, late conflicts and kill-switch behavior, atomic audits/rollback, ordering, reply retries and restricted runtime/tenant access. The ordinary worker runs local recovery; outbound sending remains absent. No live provider calls or delivery claims are made. See [delivery recovery](delivery-recovery.md).
+
 Applied migration 0011 locally; a second migration run is a no-op. API liveness/readiness return 200. The compiled worker starts and stops in disabled and fixture model modes with scheduling and receipt handling enabled, and WhatsApp sending disabled. The global spending policy remains paused with zero caps. No worker was left running, no template was registered in Meta, and no external send or paid model call was made.
 
 M2-02 passes the full 99-test/subtest PostgreSQL suite with 13 new reminder-delivery scenarios plus their parent test. Two new template wire-validation tests bring the unit suite to 51; 60 evaluation cases validate and the TypeScript build passes. Coverage includes send-before-receipt races, expired-window selection after lock waits, template approval/version/locale checks, stale reminders, STOP during I/O, durable unknown outcomes, rollback, ordering and restricted-role ownership. All sends are mocked. The sender remains an injectable service, absent from the ordinary worker. See [reminder delivery](reminder-delivery.md).
@@ -44,4 +48,4 @@ The OpenAI adapter is implemented and contract-tested, but remote calls remain d
 
 ## Remaining limits
 
-This is local testing, not production consent. Real-user onboarding needs a new notice, processor/retention choices, session authentication and WhatsApp delivery. RLS is implemented for current tenant tables; future tables must add their own policies/grants/tests. Tenant IDs are trusted server context, not a database-authenticated end-user identity. Live provider activation, actual AI accuracy, reminder/list editing, recurrence, actual template approval, WhatsApp budget qualification, unknown-send reconciliation, export/deletion and production infrastructure remain roadmap work. Due reminders now produce durable occurrences/outbound intents; reminder and reply messages remain unsent. No delivery or latency SLO has been established. Previous local setup/onboarding was committed and pushed as `36a88ac`; M1-02 was committed and pushed as `cf2d96d`. M1-03 was committed and pushed as `8d6938a`. M1-04 was committed and pushed as `0729680`. M1-05 was committed and pushed as `55a465f`. M1-06 was committed and pushed as `3951624`. M1-07 was committed and pushed as `e138f83`. M1-08 was committed and pushed as `f55fcfa`. M2-01 was committed and pushed as `279fb1e`. M2-02 changes remain local and uncommitted. No remote CI result is claimed for M2-02. The beginner project guide documents this baseline; see [guide](project-guide/README.md).
+This is local testing, not production consent. Real-user onboarding needs a new notice, processor/retention choices, session authentication and WhatsApp delivery. RLS is implemented for current tenant tables; future tables must add their own policies/grants/tests. Tenant IDs are trusted server context, not a database-authenticated end-user identity. Live provider activation, actual AI accuracy, reminder/list editing, recurrence, actual template approval, WhatsApp budget qualification, provider-assisted incident investigation, export/deletion and production infrastructure remain roadmap work. Due reminders now produce durable occurrences/outbound intents; reminder and reply messages remain unsent. No delivery or latency SLO has been established. Previous local setup/onboarding was committed and pushed as `36a88ac`; M1-02 was committed and pushed as `cf2d96d`. M1-03 was committed and pushed as `8d6938a`. M1-04 was committed and pushed as `0729680`. M1-05 was committed and pushed as `55a465f`. M1-06 was committed and pushed as `3951624`. M1-07 was committed and pushed as `e138f83`. M1-08 was committed and pushed as `f55fcfa`. M2-01 was committed and pushed as `279fb1e`. M2-02 was committed and pushed as `1fb57ee`. M2-03 changes remain local and uncommitted. No remote CI result is claimed for M2-03. The beginner project guide documents this baseline; see [guide](project-guide/README.md).

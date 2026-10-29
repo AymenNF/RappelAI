@@ -13,6 +13,7 @@ import { UsageService } from '../modules/usage/service.js';
 import { ExecutionProcessor } from '../modules/processing/execution.js';
 import { ReceiptProcessor } from '../modules/whatsapp/receipts.js';
 import { ReminderScheduler } from '../modules/reminders/scheduler.js';
+import { DeliveryRecovery } from '../modules/whatsapp/recovery.js';
 
 // Local onboarding, optional offline planning and transactional execution; no provider sends.
 const config = readConfig();
@@ -30,6 +31,7 @@ const usage = new UsageService(pool);
 const execution = new ExecutionProcessor();
 const receipts = new ReceiptProcessor();
 const scheduler = new ReminderScheduler(pool);
+const deliveryRecovery = new DeliveryRecovery(pool);
 const planner =
   config.MODEL_MODE === 'fixture'
     ? new PlanProcessor(pool, new ModelAdapter(fixtureTransport, config.MODEL_TIMEOUT_MS))
@@ -53,6 +55,7 @@ console.log(
     remoteModelEnabled: false,
     executionEnabled: true,
     receiptHandlingEnabled: true,
+    deliveryRecoveryEnabled: true,
     reminderSchedulingEnabled: true,
     whatsappSendingEnabled: false,
   }),
@@ -61,6 +64,9 @@ try {
   while (!stopping) {
     try {
       const recovered = await queue.recoverExpired();
+      const deliveriesRecovered = await deliveryRecovery.recover();
+      if (deliveriesRecovered)
+        console.log(JSON.stringify({ event: 'delivery_recovered', count: deliveriesRecovered }));
       const usageRecovered = await usage.recover();
       if (usageRecovered)
         console.log(JSON.stringify({ event: 'usage_recovered', count: usageRecovered }));

@@ -30,9 +30,17 @@ export const whatsappMessage = z.union([textMessage, templateMessage]);
 export type WhatsAppMessage = z.infer<typeof whatsappMessage>;
 export type SendResult =
   | { state: 'accepted'; providerMessageId: string }
-  | { state: 'rejected' | 'unknown'; code: string };
+  | { state: 'rejected'; code: string; retryable?: boolean; retryAfterSeconds?: number }
+  | { state: 'unknown'; code: string };
 export interface WhatsAppTransport {
   send(message: WhatsAppMessage, signal: AbortSignal): Promise<SendResult>;
+}
+
+export function retryAfterSeconds(value: string | null, now = Date.now()): number {
+  if (!value) return 0;
+  const seconds = /^\d+$/.test(value) ? Number(value) : (Date.parse(value) - now) / 1000;
+  if (Number.isNaN(seconds) || seconds <= 0) return 0;
+  return Math.min(2147483647, Math.ceil(seconds));
 }
 
 // Bound even an injected transport that ignores cancellation. Late completions cannot change state.
@@ -144,7 +152,16 @@ export class WhatsAppCloudTransport implements WhatsAppTransport {
           .object({ error: z.object({ code: z.number().int().nonnegative() }) })
           .safeParse(data);
         return response.status >= 400 && response.status < 500 && error.success
-          ? { state: 'rejected', code: `meta_${error.data.error.code}` }
+          ? {
+              state: 'rejected',
+              code: `meta_${error.data.error.code}`,
+              ...(response.status === 429
+                ? {
+                    retryable: true,
+                    retryAfterSeconds: retryAfterSeconds(response.headers.get('retry-after')),
+                  }
+                : {}),
+            }
           : { state: 'unknown', code: 'http_error' };
       }
       const result = z

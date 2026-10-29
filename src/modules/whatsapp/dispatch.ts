@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { CONSENT_VERSION } from '../identity/onboarding.js';
 import { boundedSend, textMessage, type WhatsAppTransport } from './send.js';
 import { persistSendResult } from './attempts.js';
+import { latestAttempt, expireRetry, auditDelivery } from './retry.js';
 
 export const testSendPolicySchema = z
   .object({
@@ -56,12 +57,16 @@ export class TestReplySender {
         !this.policy.recipients.includes(user.sender_id)
       )
         throw new SendBlockedError('Outside test allowlist');
-      const old = (
-        await client.query('SELECT id,state FROM whatsapp_attempts WHERE event_id=$1', [eventId])
-      ).rows[0];
+      const old = await latestAttempt(client, 'event_id', eventId);
       if (old) {
-        await client.query('COMMIT');
-        return old;
+        if (old.recovery_state === 'retry_wait' && old.retry_expired)
+          await expireRetry(client, old);
+        else if (old.recovery_state === 'retry_wait' && !old.retry_due)
+          throw new SendBlockedError('Delivery retry not due');
+        if (old.recovery_state !== 'retry_wait' || old.retry_expired) {
+          await client.query('COMMIT');
+          return { id: old.id, state: old.state };
+        }
       }
       const source = (
         await client.query(
@@ -95,13 +100,13 @@ export class TestReplySender {
       if (!reason && planReply) {
         const blocked = await client.query(
           `SELECT 1 FROM whatsapp_attempts WHERE user_id=$1
-          AND state IN ('dispatching','unknown') LIMIT 1`,
+          AND state IN ('dispatching','unknown') AND recovery_state<>'abandoned' LIMIT 1`,
           [user.id],
         );
         const earlier = await client.query(
           `SELECT 1 FROM reply_intents r JOIN ingress_events e ON e.id=r.event_id
-          LEFT JOIN whatsapp_attempts a ON a.event_id=r.event_id
-          WHERE r.user_id=$1 AND r.status='pending' AND a.id IS NULL
+          LEFT JOIN LATERAL (SELECT * FROM whatsapp_attempts WHERE event_id=r.event_id ORDER BY attempt_no DESC LIMIT 1) a ON true
+          WHERE r.user_id=$1 AND r.status='pending' AND (a.id IS NULL OR a.recovery_state='retry_wait')
           AND e.sequence_no<(SELECT sequence_no FROM ingress_events WHERE id=$2) LIMIT 1`,
           [user.id, eventId],
         );
@@ -116,7 +121,8 @@ export class TestReplySender {
       attempt = (
         await client.query(
           `INSERT INTO whatsapp_attempts(user_id,event_id,identity_event_id,reply_event_id,
-        phone_number_id,recipient_id,state,error_code) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id,state`,
+        phone_number_id,recipient_id,state,error_code,attempt_no,previous_attempt_id,retry_until,dispatch_deadline)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,COALESCE($11::timestamptz,clock_timestamp()+interval '1 day'),clock_timestamp()+$12*interval '1 millisecond') RETURNING id,state`,
           [
             user.id,
             eventId,
@@ -126,9 +132,18 @@ export class TestReplySender {
             user.sender_id,
             reason ? 'suppressed' : 'dispatching',
             reason,
+            (old?.attempt_no ?? 0) + 1,
+            old?.id ?? null,
+            old?.retry_until ?? null,
+            this.policy.timeoutMs + 30000,
           ],
         )
       ).rows[0];
+      await auditDelivery(
+        client,
+        { ...attempt, user_id: user.id },
+        old ? 'retry_authorized' : 'authorized',
+      );
       await client.query('COMMIT');
     } catch (error) {
       await client.query('ROLLBACK');

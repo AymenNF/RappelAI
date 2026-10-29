@@ -4,6 +4,8 @@ Status: target system with implemented ingress, identity, tenant isolation, work
 
 ## Shape and boundaries
 
+M2-03 adds a local recovery pass and an administrator reconciliation service around the shared WhatsApp attempt ledger. Recovery records expired dispatches as unknown; it does not resend them. Sender entry points authorize bounded retries after definite rejection or an evidenced operator decision. Every successor rechecks eligibility, and late contradictory acceptance pauses sending. See [delivery recovery](delivery-recovery.md).
+
 The current reminder path is saved plan -> reminder -> occurrence + outbound intent -> durable send attempt -> provider acceptance -> delivery receipts. M2-02 implements the last stages through an injectable test service and the existing receipt worker. It does not activate live sending. Template versions and selected message payloads are persisted, while network calls run outside database transactions. See [reminder delivery](reminder-delivery.md).
 
 Use a **modular monolith in one repository**, deployed as an API and one or more workers. This preserves database transactions and simple debugging while allowing ingress and background load to scale separately. Split services only when measurements or team ownership justify it.

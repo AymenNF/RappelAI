@@ -13,6 +13,7 @@ import {
   type WhatsAppTransport,
 } from '../whatsapp/send.js';
 import { persistSendResult } from '../whatsapp/attempts.js';
+import { latestAttempt, expireRetry, auditDelivery } from '../whatsapp/retry.js';
 
 /** Injectable test-number delivery path. No production runtime or billable-send authorization. */
 export class ReminderSender {
@@ -53,14 +54,16 @@ export class ReminderSender {
         !this.policy.recipients.includes(user.sender_id)
       )
         throw new SendBlockedError('Outside test allowlist');
-      const old = (
-        await client.query('SELECT id,state FROM whatsapp_attempts WHERE outbound_message_id=$1', [
-          outboundId,
-        ])
-      ).rows[0];
+      const old = await latestAttempt(client, 'outbound_message_id', outboundId);
       if (old) {
-        await client.query('COMMIT');
-        return old;
+        if (old.recovery_state === 'retry_wait' && old.retry_expired)
+          await expireRetry(client, old);
+        else if (old.recovery_state === 'retry_wait' && !old.retry_due)
+          throw new SendBlockedError('Delivery retry not due');
+        if (old.recovery_state !== 'retry_wait' || old.retry_expired) {
+          await client.query('COMMIT');
+          return { id: old.id, state: old.state };
+        }
       }
       // Lock the lifecycle row too: cancellation/version changes must serialize with authorization.
       const source = (
@@ -90,13 +93,13 @@ export class ReminderSender {
       if (!reason) {
         const earlier = await client.query(
           `SELECT 1 FROM outbound_messages m
-          LEFT JOIN whatsapp_attempts a ON a.outbound_message_id=m.id
-          WHERE m.user_id=$1 AND m.status='pending' AND a.id IS NULL
+          LEFT JOIN LATERAL (SELECT * FROM whatsapp_attempts WHERE outbound_message_id=m.id ORDER BY attempt_no DESC LIMIT 1) a ON true
+          WHERE m.user_id=$1 AND m.status='pending' AND (a.id IS NULL OR a.recovery_state='retry_wait')
           AND (m.available_at,m.id)<(SELECT available_at,id FROM outbound_messages WHERE id=$2) LIMIT 1`,
           [user.id, outboundId],
         );
         const unknown = await client.query(
-          "SELECT 1 FROM whatsapp_attempts WHERE user_id=$1 AND state IN ('dispatching','unknown') LIMIT 1",
+          "SELECT 1 FROM whatsapp_attempts WHERE user_id=$1 AND state IN ('dispatching','unknown') AND recovery_state<>'abandoned' LIMIT 1",
           [user.id],
         );
         if (earlier.rowCount || unknown.rowCount)
@@ -166,7 +169,8 @@ export class ReminderSender {
       attempt = (
         await client.query(
           `INSERT INTO whatsapp_attempts(user_id,outbound_message_id,phone_number_id,recipient_id,
-        state,error_code,template_id,message_payload) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id,state`,
+        state,error_code,template_id,message_payload,attempt_no,previous_attempt_id,retry_until,dispatch_deadline)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,COALESCE($11::timestamptz,clock_timestamp()+interval '1 day'),clock_timestamp()+$12*interval '1 millisecond') RETURNING id,state`,
           [
             user.id,
             outboundId,
@@ -176,9 +180,18 @@ export class ReminderSender {
             reason,
             templateId,
             message ?? null,
+            (old?.attempt_no ?? 0) + 1,
+            old?.id ?? null,
+            old?.retry_until ?? null,
+            this.policy.timeoutMs + 30000,
           ],
         )
       ).rows[0];
+      await auditDelivery(
+        client,
+        { ...attempt, user_id: user.id },
+        old ? 'retry_authorized' : 'authorized',
+      );
       await client.query('COMMIT');
     } catch (error) {
       try {
@@ -209,8 +222,9 @@ export class ReminderSender {
     const pending = await this.pool.query(
       `SELECT candidates.id FROM users u
       CROSS JOIN LATERAL (SELECT m.id,m.available_at FROM outbound_messages m
+        LEFT JOIN LATERAL (SELECT * FROM whatsapp_attempts WHERE outbound_message_id=m.id ORDER BY attempt_no DESC LIMIT 1) a ON true
         WHERE m.user_id=u.id AND m.status='pending' AND m.available_at<=clock_timestamp()
-        AND NOT EXISTS(SELECT 1 FROM whatsapp_attempts a WHERE a.outbound_message_id=m.id)
+        AND (a.id IS NULL OR a.recovery_state='retry_wait')
         ORDER BY m.available_at,m.id LIMIT 1) candidates
       WHERE u.business_phone_id=$1 AND u.sender_id=ANY($2::text[])
       ORDER BY candidates.available_at,candidates.id LIMIT $3`,

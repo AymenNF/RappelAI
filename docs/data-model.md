@@ -4,6 +4,8 @@ The executable schema includes `schema_migrations`, `ingress_events`, `work_outb
 
 ## Current schema
 
+Migration 0012 adds bounded attempt sequences, retry/recovery deadlines and `delivery_recovery_audit`. Source uniqueness now includes the attempt number; a predecessor guard prevents invalid retry chains. The audit is tenant-scoped and operator resolutions are protected from runtime credentials. See [delivery recovery](delivery-recovery.md).
+
 Migration 0011 adds deployment-owned `whatsapp_templates` and extends `whatsapp_attempts` with owner-scoped outbound references, immutable message payloads and template references. See [reminder delivery](reminder-delivery.md).
 
 | Table               | Purpose                                                  | Key invariants                                                                           |

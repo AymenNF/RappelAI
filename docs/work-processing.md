@@ -57,6 +57,8 @@ This resets attempts, preserves ordering and records the label. The label is an 
 
 ## Evidence
 
+M2-03 also runs a bounded database-only delivery recovery pass each worker cycle. It marks expired dispatches unknown and expired retries exhausted; it does not send. Audited operator reconciliation and bounded retry authorization use the shared WhatsApp attempt ledger. See [delivery recovery](delivery-recovery.md).
+
 Real PostgreSQL tests use non-owner ingress/worker logins and disposable schemas. They cover simultaneous claims, independent users/business phones, ordered batches, abandoned lease recovery, stale-token fencing, atomic rollback, retry exhaustion, audited operator retry, stage separation, heartbeat extension, lease loss, cancellation-ignoring preparation, permanent failures and ingress transaction visibility. Identity tests additionally verify that STOP invalidates earlier ready work and old work cannot revive under a new consent grant. These are local correctness checks, not production load or external-delivery tests.
 
 M1-05 adds metered model dispatch. Budget/kill/rate/uncertainty denials defer the work by 60 seconds without consuming its claim attempt. Unknown provider usage retains its reservation until reconciliation. The worker runs usage recovery alongside lease recovery. See [usage controls](usage-controls.md).
