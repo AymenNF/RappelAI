@@ -49,7 +49,7 @@ export async function applySeriesCommand(
           `SELECT r.*,to_char(r.due_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS due_iso
         FROM reminders r JOIN reminder_controls c ON c.reminder_id=r.id AND c.user_id=r.user_id JOIN users u ON u.id=r.user_id
         WHERE c.reference=$1 AND r.user_id=$2 AND r.status='pending' AND r.series_id IS NULL
-          AND r.scheduled_at IS NULL AND r.due_at>clock_timestamp() AND c.schedule_version=r.schedule_version
+          AND r.delivery_mode='immediate' AND r.scheduled_at IS NULL AND r.due_at>clock_timestamp() AND c.schedule_version=r.schedule_version
           AND c.invalidated_at IS NULL AND c.expires_at>clock_timestamp()
           AND c.consent_grant_at=u.consent_at AND c.timezone_confirmed_at=u.timezone_confirmed_at AND c.timezone=u.timezone
         FOR UPDATE OF r`,
@@ -116,7 +116,7 @@ export async function applySeriesCommand(
             `SELECT r.* FROM reminders r JOIN reminder_series s ON s.source_reminder_id=r.id AND s.user_id=r.user_id
           WHERE r.id=$1 AND r.user_id=$2 AND r.series_id IS NULL AND s.id=$3
           AND r.status='pending' AND r.schedule_version=s.source_version AND r.due_at=s.source_due_at
-          AND r.due_at>clock_timestamp() AND r.scheduled_at IS NULL FOR UPDATE OF r`,
+          AND r.delivery_mode='immediate' AND r.due_at>clock_timestamp() AND r.scheduled_at IS NULL FOR UPDATE OF r`,
             [series.source_reminder_id, userId, series.id],
           )
         ).rows[0];

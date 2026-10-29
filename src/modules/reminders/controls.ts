@@ -126,7 +126,10 @@ export async function applyReminderCommand(
       await client.query(
         `UPDATE reminders SET status=$3,schedule_version=schedule_version+1,
         due_at=CASE WHEN $3='pending' THEN clock_timestamp()+$4*interval '1 minute' ELSE due_at END,
-        scheduled_at=CASE WHEN $3='pending' THEN NULL ELSE scheduled_at END WHERE id=$1 AND user_id=$2`,
+        scheduled_at=CASE WHEN $3='pending' THEN NULL ELSE scheduled_at END,
+        delivery_mode=CASE WHEN $3='pending' THEN 'immediate' ELSE delivery_mode END,
+        promised_due_at=CASE WHEN $3='pending' THEN NULL ELSE promised_due_at END,
+        delivery_choice_id=CASE WHEN $3='pending' THEN NULL ELSE delivery_choice_id END WHERE id=$1 AND user_id=$2`,
         [
           reminderId,
           userId,
@@ -171,7 +174,7 @@ export async function applyReminderCommand(
           ? 'Reminder marked done.'
           : command.action === 'cancel'
             ? 'Reminder cancelled.'
-            : `Reminder snoozed for ${command.minutes} minutes.\n${controlHelp(await ensureReminderControl(client, userId, reminderId))}`;
+            : `Reminder snoozed for ${command.minutes} minutes with exact-time delivery (bypassing quiet hours/digest).\n${controlHelp(await ensureReminderControl(client, userId, reminderId))}`;
     }
   }
   await client.query(

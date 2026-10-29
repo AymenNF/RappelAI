@@ -1,5 +1,7 @@
 # Architecture and system design
 
+M2-07 separates original due times from explicitly confirmed delivery promises. Preference changes never reschedule exact reminders. Deferred entries use the existing occurrence/outbound/attempt path with a later availability instant; digest entries are individual messages, not aggregate summaries. See [delivery preferences](delivery-preferences.md).
+
 Status: target system with implemented ingress, identity, tenant isolation, work leases, persisted plans, usage controls, local action execution, due scheduling, tested reminder delivery/recovery and reminder lifecycle controls. Live outbound remains disabled. Updated 2026-10-29. Assumptions: solo developer, small private beta, WhatsApp first, TypeScript, one region, managed PostgreSQL at launch. Country, hosting, languages and provider choices remain open in [decisions](decisions/README.md).
 
 ## Shape and boundaries

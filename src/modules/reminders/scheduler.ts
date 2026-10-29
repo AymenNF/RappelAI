@@ -49,8 +49,8 @@ export class ReminderScheduler {
           if (signal?.aborted) throw new Error('Sweep cancelled');
           const suppressed = !hasOnboarded(user as IdentityState) || !reminder.matches_snapshot;
           const inserted = await client.query(
-            `INSERT INTO reminder_occurrences(user_id,reminder_id,schedule_version,original_due_at,promised_due_at,status,suppression_reason)
-            SELECT user_id,id,schedule_version,due_at,due_at,$2,$3 FROM reminders WHERE id=$1
+            `INSERT INTO reminder_occurrences(user_id,reminder_id,schedule_version,original_due_at,promised_due_at,delivery_mode,status,suppression_reason)
+            SELECT user_id,id,schedule_version,due_at,COALESCE(promised_due_at,due_at),delivery_mode,$2,$3 FROM reminders WHERE id=$1
             ON CONFLICT(reminder_id,schedule_version,original_due_at) DO NOTHING RETURNING id`,
             [
               reminder.id,
@@ -78,7 +78,7 @@ export class ReminderScheduler {
               : '';
           await client.query(
             `INSERT INTO outbound_messages(user_id,occurrence_id,body,available_at,consent_grant_at,timezone_confirmed_at,timezone,status,suppression_reason)
-            SELECT o.user_id,o.id,'Reminder: '||r.title||CASE WHEN s.id IS NULL THEN '' ELSE
+            SELECT o.user_id,o.id,CASE WHEN o.delivery_mode='digest' THEN 'Digest entry: ' ELSE 'Reminder: ' END||r.title||CASE WHEN s.id IS NULL THEN '' ELSE
               '. '||$2||'. These controls affect this occurrence only. Stop all: CANCEL SERIES '||s.reference END,
               o.promised_due_at,p.consent_grant_at,p.timezone_confirmed_at,
               p.timezone,o.status,o.suppression_reason

@@ -1,5 +1,7 @@
 # One-time reminder scheduling (M2-01)
 
+M2-07 extends this original immediate-only milestone with [explicit delivery promises](delivery-preferences.md). Immediate promises still equal the original due time; confirmed digest/quiet promises can be later, and outbound availability uses that frozen instant.
+
 The worker now turns due, saved reminders into durable delivery work. It checks the clock, creates a record saying “this reminder is due,” and files the message that a future sender should deliver. It does **not** call WhatsApp or mark anything delivered.
 
 Stop older workers, run `npm run db:migrate`, then start the current worker with `npm run dev:worker`. Migration 0010 adds the scheduling fields and tables. Existing one-time reminders are considered when due; the migration itself does not enqueue or send them.

@@ -6,6 +6,8 @@ A WhatsApp-first personal assistant for reminders, lists, and eventually durable
 
 ## Start here
 
+M2-07 adds digest-slot and quiet-hour preferences with explicit per-reminder previews and confirmation. Exact-time reminders remain unchanged. Digest entries are sent individually. See the [delivery preferences guide](docs/delivery-preferences.md).
+
 M2-06 adds paginated list reads, item editing/completion, typo/ambiguous-match clarification and stale-choice protection. See the [list management guide](docs/list-management.md).
 
 M2-05 adds finite daily/weekly recurrence with a five-date preview, explicit confirmation, daylight-saving handling and whole-series cancellation. See the [recurring reminders guide](docs/recurring-reminders.md).

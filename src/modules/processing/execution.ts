@@ -68,7 +68,7 @@ export class ExecutionProcessor implements WorkHandler<null> {
       outcome = 'unsupported';
       reason = 'digest_unavailable';
       body =
-        'Digest reminders are not available yet. Please choose an exact date and time. Nothing from this request was saved.';
+        'Automatic digest selection is not supported. Save an exact-time reminder first, set DIGEST AT HH:MM, then use DELIVER <reference> DIGEST to review and confirm its delivery time. Nothing from this request was saved.';
     }
     if (outcome === 'executed') {
       // Validate normalized names before any mutation; the entire plan is all-or-nothing.

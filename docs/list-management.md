@@ -62,6 +62,6 @@ Stop older workers, run `npm run db:migrate`, then rebuild/restart the worker. N
 
 Unit tests cover syntax/escaping, malformed commands, Unicode normalization, typo/substring matching, duplicate preservation and bounded previews. Restricted-login PostgreSQL tests cover paginated reads, two-stage clarification, duplicates, exact-match precedence, no-match/too-many results, stale/expired/superseded/foreign choices, replay and simultaneous consumption, append/edit races, expiry during a lock wait, no-op completion, queued-work ordering, lease/transaction rollback, STOP/settings changes, large-list limits, immutable receipts and RLS/FK/grant isolation.
 
-Live sending and paid model calls remain disabled. Next is **M2-07: digest/quiet-hour preferences with an explicit delivery promise**, so exact-time reminders are not silently delayed. The beginner PDF remains the M1-08 historical snapshot.
+Live sending and paid model calls remain disabled. M2-07 now implements [delivery preferences](delivery-preferences.md) with explicit confirmation; exact-time reminders are not silently delayed. Next is M3-01: abuse, rate and plan limits. The beginner PDF remains the M1-08 historical snapshot.
 
 `npm run test:integration` runs at most two test files simultaneously to stay within the local PostgreSQL connection limit. Concurrent operations inside individual race tests still run in parallel.

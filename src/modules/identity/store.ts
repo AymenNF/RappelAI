@@ -4,6 +4,8 @@ import { WorkQueue, type WorkTransition } from '../processing/leases.js';
 import { applyReminderCommand, reminderCommand } from '../reminders/controls.js';
 import { seriesCommand } from '../reminders/recurrence.js';
 import { applySeriesCommand } from '../reminders/series.js';
+import { preferenceCommand } from '../reminders/delivery-time.js';
+import { applyPreferenceCommand } from '../reminders/preferences.js';
 import { listCommand } from '../lists/commands.js';
 import { applyListCommand } from '../lists/management.js';
 import {
@@ -72,6 +74,7 @@ export class IdentityProcessor {
     const command = reminderCommand(event.payload);
     const recurrence = seriesCommand(text);
     const list = listCommand(text);
+    const preference = preferenceCommand(text);
     const transition = validTime
       ? onboard(user as IdentityState, command && !text ? 'reminder control' : text, sentAt, now)
       : {
@@ -81,7 +84,10 @@ export class IdentityProcessor {
           consentAction: null,
         };
     const s = transition.state;
-    if (list && transition.disposition === 'ready') {
+    if (preference && transition.disposition === 'ready') {
+      transition.reply = await applyPreferenceCommand(client, event.id, user.id, preference);
+      transition.disposition = 'handled';
+    } else if (list && transition.disposition === 'ready') {
       transition.reply = await applyListCommand(client, event.id, user.id, list);
       transition.disposition = 'handled';
     } else if (recurrence && transition.disposition === 'ready') {
@@ -136,6 +142,16 @@ export class IdentityProcessor {
       `UPDATE reply_intents SET status='suppressed' WHERE user_id=$1 AND status='pending'
       AND ($2::boolean OR consent_grant_at IS DISTINCT FROM $3::timestamptz
         OR timezone_confirmed_at IS DISTINCT FROM $4::timestamptz)`,
+      [user.id, !hasOnboarded(s), s.consent_at, s.timezone_confirmed_at],
+    );
+    await client.query(
+      `UPDATE delivery_preferences SET active=false WHERE user_id=$1 AND active
+      AND ($2::boolean OR consent_grant_at IS DISTINCT FROM $3::timestamptz OR timezone_confirmed_at IS DISTINCT FROM $4::timestamptz)`,
+      [user.id, !hasOnboarded(s), s.consent_at, s.timezone_confirmed_at],
+    );
+    await client.query(
+      `UPDATE delivery_choices SET status='invalidated' WHERE user_id=$1 AND status='pending'
+      AND ($2::boolean OR consent_grant_at IS DISTINCT FROM $3::timestamptz OR timezone_confirmed_at IS DISTINCT FROM $4::timestamptz)`,
       [user.id, !hasOnboarded(s), s.consent_at, s.timezone_confirmed_at],
     );
     // The scheduler takes the same user lock. STOP/settings changes invalidate queued reminders too.
