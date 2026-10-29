@@ -34,6 +34,9 @@ export class QuotaControl {
     const c = await this.pool.connect();
     try {
       await c.query('BEGIN');
+      await c.query(
+        "SELECT pg_advisory_xact_lock_shared(hashtextextended(current_schema()||':privacy',0))",
+      );
       await assertUsageOperator(c);
       if (userId) {
         if (!(await c.query('SELECT id FROM users WHERE id=$1 FOR UPDATE', [userId])).rowCount)

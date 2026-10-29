@@ -32,7 +32,7 @@ STOP and syntactically valid reminder DONE/COMPLETE/CANCEL controls bypass incom
 
 Minute limits use fixed clock-minute windows. Daily limits use UTC midnight, independently of user timezone. Fixed windows permit traffic on both sides of a boundary; these are not rolling-window or smooth-throughput guarantees. Defaults are initial local policy, not measured production capacity or provider limits. Zero disables that operation; other limits remain independent.
 
-Inventory checks reject the entire saved plan before any reminder/item is created and store a quota reply. Recurrence checks capacity at preview and again at confirmation. Completing/cancelling reminders frees pending capacity. List deletion and retention are M3-02 work; for now an operator must review a full list-item account. Existing data is not deleted when a limit is lowered.
+Inventory checks reject the entire saved plan before any reminder/item is created and store a quota reply. Recurrence checks capacity at preview and again at confirmation. Completing/cancelling reminders frees pending capacity. M3-02 adds [account deletion and retention](privacy.md); individual list-item deletion is still outside this workflow; for now an operator must review a full list-item account. Existing data is not deleted when a limit is lowered.
 
 Model work that was already admitted waits when its attempt limit is exhausted; the work runner defers it without spending a retry attempt. Unused monetary reservations are released. Sending likewise leaves the outbound intent pending and makes no provider call. `QUOTA` explains that already-queued work waits, whereas rejected incoming requests are not queued for later execution.
 
@@ -67,6 +67,6 @@ The ingress store uses a database advisory lock to check unfinished capacity and
 
 Tests cover request denial before mutation, notice throttling, STOP/control exceptions, account blocking, replay/rollback/lease fencing, concurrent owner/shared counters, UTC windows, atomic mixed-plan rejection, recurrence limits, uncertain model attempts and reservation release, shared sender gates, webhook capacity/replay, policy validation and role/RLS/audit protection. Provider transports are mocked.
 
-This is application-level abuse control. A deployment still needs edge connection/IP protections, trusted proxy configuration and load testing. Safety controls and receipts intentionally bypass ordinary backlog capacity; this is not a hard ceiling on all database rows or transport work. Completed events, audit records and old counter windows remain stored until the M3-02 retention/deletion implementation. No ban classifier, payment plans, billing or per-user numeric overrides are added here.
+This is application-level abuse control. A deployment still needs edge connection/IP protections, trusted proxy configuration and load testing. Safety controls and receipts intentionally bypass ordinary backlog capacity; this is not a hard ceiling on all database rows or transport work. M3-02 adds explicit raw-payload/counter retention and confirmed account erasure; see [privacy](privacy.md). No ban classifier, payment plans, billing or per-user numeric overrides are added here.
 
-Stop old workers, run `npm run db:migrate`, rebuild and restart. Next is **M3-02: export, deletion and retention**, including cancellation of associated pending work and provider-safe cleanup.
+Stop old workers, run `npm run db:migrate`, rebuild and restart. M3-02 now provides [export, deletion and retention](privacy.md). Next is **M3-03: telemetry, reconciliation and alerts**.

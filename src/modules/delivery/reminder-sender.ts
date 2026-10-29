@@ -38,6 +38,9 @@ export class ReminderSender {
     let message: WhatsAppMessage | undefined;
     try {
       await client.query('BEGIN');
+      await client.query(
+        "SELECT pg_advisory_xact_lock_shared(hashtextextended(current_schema()||':privacy',0))",
+      );
       // Same lock ordering as metered planning and onboarding. No lock survives network I/O.
       const policy = (
         await client.query('SELECT enabled FROM usage_policy WHERE singleton FOR SHARE')

@@ -10,3 +10,6 @@ evals/results/*
 !evals/results/.gitkeep
 .DS_Store
 Thumbs.db
+
+# Private account exports must never be committed.
+exports/

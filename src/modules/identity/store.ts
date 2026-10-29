@@ -1,3 +1,4 @@
+import { privacyCommand, applyPrivacyCommand } from '../privacy/commands.js';
 import { admitRequest } from '../quotas/service.js';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
@@ -59,6 +60,7 @@ export class IdentityProcessor {
         [event.phone_number_id, event.sender_id],
       )
     ).rows[0];
+    if (user.deletion_requested_at) return { nextStage: null, disposition: 'blocked' };
     const now = event.db_now as Date;
     const timestamp = Number(event.payload.timestamp) * 1000;
     const validTime =
@@ -76,9 +78,11 @@ export class IdentityProcessor {
     const recurrence = seriesCommand(text);
     const list = listCommand(text);
     const preference = preferenceCommand(text);
-    const admission = validTime
-      ? await admitRequest(client, event.id, user.id, text, event.payload)
-      : null;
+    const privacy = privacyCommand(text);
+    const admission =
+      validTime && (!privacy || privacy.action === 'invalid')
+        ? await admitRequest(client, event.id, user.id, text, event.payload)
+        : null;
     const transition =
       validTime && admission && !admission.allowed
         ? {
@@ -100,6 +104,17 @@ export class IdentityProcessor {
               reply: 'Invalid message timestamp. Please send your message again.',
               consentAction: null,
             };
+    if (privacy && validTime && (!admission || admission.allowed)) {
+      transition.reply = await applyPrivacyCommand(client, event.id, user.id, privacy);
+      transition.disposition = 'handled';
+      const deleting = (
+        await client.query('SELECT deletion_requested_at FROM users WHERE id=$1', [user.id])
+      ).rows[0].deletion_requested_at;
+      if (deleting) {
+        transition.state.paused = true;
+        transition.state.deletion_requested_at = deleting;
+      }
+    }
     const s = transition.state;
     if (preference && transition.disposition === 'ready') {
       transition.reply = await applyPreferenceCommand(client, event.id, user.id, preference);

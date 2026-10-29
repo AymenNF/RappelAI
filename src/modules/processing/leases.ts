@@ -40,7 +40,8 @@ export class WorkQueue {
     const result = await this.pool.query(
       `WITH candidate AS (
       SELECT q.id FROM work_outbox q JOIN ingress_events e ON e.id=q.event_id
-      WHERE q.stage=$1 AND q.status='pending' AND q.available_at<=clock_timestamp() AND q.attempts<q.max_attempts
+      WHERE NOT EXISTS(SELECT 1 FROM users u WHERE u.business_phone_id=e.phone_number_id AND u.sender_id=e.sender_id AND u.deletion_requested_at IS NOT NULL)
+        AND q.stage=$1 AND q.status='pending' AND q.available_at<=clock_timestamp() AND q.attempts<q.max_attempts
         AND NOT EXISTS (
           SELECT 1 FROM work_outbox prev JOIN ingress_events pe ON pe.id=prev.event_id
           WHERE pe.phone_number_id=e.phone_number_id AND pe.kind=e.kind
@@ -56,6 +57,20 @@ export class WorkQueue {
       [stage, owner, leaseMs],
     );
     return result.rows[0] ?? null;
+  }
+
+  async cancelDeleted(limit = 500): Promise<number> {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 1000)
+      throw new Error('Invalid cancellation limit');
+    const result = await this.pool.query(
+      `WITH cancelled AS (
+      SELECT q.id FROM work_outbox q JOIN ingress_events e ON e.id=q.event_id JOIN users u ON u.business_phone_id=e.phone_number_id AND u.sender_id=e.sender_id
+      WHERE u.deletion_requested_at IS NOT NULL AND q.status<>'completed' ORDER BY e.sequence_no LIMIT $1 FOR UPDATE OF q SKIP LOCKED
+    ) UPDATE work_outbox q SET status='completed',completed_at=clock_timestamp(),lease_token=NULL,lease_until=NULL,lease_owner=NULL,last_error_code='account_deletion'
+      FROM cancelled c WHERE q.id=c.id RETURNING q.id`,
+      [limit],
+    );
+    return result.rowCount ?? 0;
   }
 
   async renew(lease: WorkLease, leaseMs: number): Promise<boolean> {
@@ -78,13 +93,23 @@ export class WorkQueue {
     let discard = false;
     try {
       await client.query('BEGIN');
+      await client.query(
+        "SELECT pg_advisory_xact_lock_shared(hashtextextended(current_schema()||':privacy',0))",
+      );
       const held = await client.query(
         `SELECT id FROM work_outbox WHERE id=$1 AND lease_token=$2
         AND status='leased' AND lease_until>clock_timestamp() FOR UPDATE`,
         [lease.id, lease.lease_token],
       );
       if (!held.rowCount) throw new LeaseLostError();
-      const transition = await apply(client);
+      const deleting = (
+        await client.query(
+          `SELECT 1 FROM ingress_events e JOIN users u ON u.business_phone_id=e.phone_number_id AND u.sender_id=e.sender_id
+        WHERE e.id=$1 AND u.deletion_requested_at IS NOT NULL`,
+          [lease.event_id],
+        )
+      ).rowCount;
+      const transition = deleting ? { nextStage: null } : await apply(client);
       if (
         transition.nextStage !== null &&
         !(lease.stage === 'onboarding' && transition.nextStage === 'action') &&

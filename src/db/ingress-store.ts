@@ -1,3 +1,4 @@
+import { privacyCommand } from '../modules/privacy/commands.js';
 import type { Pool } from 'pg';
 import type { IngressEvent } from '../modules/whatsapp/events.js';
 import { reminderCommand } from '../modules/reminders/controls.js';
@@ -35,6 +36,28 @@ export class PostgresIngressStore implements IngressStore {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
+      await client.query(
+        "SELECT pg_advisory_xact_lock_shared(hashtextextended(current_schema()||':privacy',0))",
+      );
+      const filtered = await client.query(
+        `SELECT x.ordinal FROM jsonb_to_recordset($1::jsonb) AS x(ordinal integer,phone text,sender text)
+        WHERE NOT privacy_address_blocked(x.phone,x.sender)`,
+        [
+          JSON.stringify(
+            events.map((e, i) => ({
+              ordinal: i,
+              phone: e.phoneNumberId,
+              sender: e.senderId ?? e.payload.recipient_id ?? null,
+            })),
+          ),
+        ],
+      );
+      const allowed = new Set(filtered.rows.map((r) => r.ordinal));
+      events = events.filter((_e, i) => allowed.has(i));
+      if (!events.length) {
+        await client.query('COMMIT');
+        return { inserted: 0 };
+      }
       // Serialize insertion/commit per provider stream BEFORE allocating identity sequence values.
       // Sorting multi-stream batches prevents opposing lock acquisition order.
       const streams = [
@@ -49,6 +72,12 @@ export class PostgresIngressStore implements IngressStore {
       }
       const normal = events.filter((e) => {
         if (e.kind === 'delivery.status') return false;
+        const privacy = privacyCommand(
+          typeof (e.payload.text as { body?: unknown } | undefined)?.body === 'string'
+            ? (e.payload.text as { body: string }).body
+            : null,
+        );
+        if (privacy && privacy.action !== 'invalid') return false;
         const command = reminderCommand(e.payload);
         const stop =
           e.payload.type === 'text' &&

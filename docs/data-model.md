@@ -4,6 +4,8 @@ The executable schema includes `schema_migrations`, `ingress_events`, `work_outb
 
 ## Current schema
 
+Migration 0018 adds `privacy_requests`, `privacy_actions`, the account deletion marker, ingress redaction timestamps, private replay fingerprints/key, retention policy and aggregate privacy-operation records. Ownership foreign keys support atomic administrator erasure without granting runtime DELETE access. See [privacy](privacy.md).
+
 Migration 0017 adds administrator-owned quota policy/audit, tenant-isolated account blocks and counters, immutable request admissions with event-owner validation, and shared global attempt counters. See [quotas](quotas.md).
 
 Migration 0016 adds forced-RLS `delivery_preferences`, immutable delivery previews in `delivery_choices`, and per-event `delivery_preference_actions`. Deferred reminders store a separate promised instant and confirmed choice reference; occurrence constraints permit explicit deferral while requiring immediate promises to equal the original due time. Outbound availability uses the saved promise. See [delivery preferences](delivery-preferences.md).
@@ -45,27 +47,27 @@ erDiagram
   USERS ||--o{ USAGE_EVENTS : incurs
 ```
 
-| Entity / milestone          | Important fields                                                                                           | Constraints and indexes                                                              |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `users` / M1                | UUID, normalized phone identity, zone, language, consent version/time, service-window expiry, deleted time | Unique channel + business phone + sender; timezone must be confirmed                 |
-| `inbound_messages` / M1     | user, ingress event, status, context, processed time                                                       | Unique ingress event; user + sequence pending index                                  |
-| `action_plans` / M1         | inbound ID, version, model/prompt IDs, validated decision                                                  | One persisted active plan per message; attempts reuse plan                           |
-| `action_receipts` / M1      | user, action key, entity kind/ID, result                                                                   | Unique user + action key; inserted with entity mutation                              |
-| `lists` / M1                | user, name, archived/deleted/created/updated                                                               | Unique active user + lower(name); unique (user,id)                                   |
-| `list_items` / M1           | user, list, text, sort position, done/deleted                                                              | Composite (user,list) FK; lock list for reorder; optional trigram index              |
-| `reminders` / M1–M2         | user, title, next due, lifecycle, delivery mode, schedule version, source                                  | Partial due index on pending/nondeleted; unique (user,id); owner-aware references    |
-| Recurrence fields / M2      | local time, IANA zone, start date, RRULE, end                                                              | All-or-none rule/time/zone; supported subset validation                              |
-| `reminder_occurrences` / M2 | user, reminder, original instant, promised delivery instant, status, schedule version                      | Unique (reminder, schedule version, original instant); composite owner FK; due index |
-| `outbound_messages` / M1–M2 | user, idempotency key, message kind/template/locale, payload, available time, status                       | Unique logical key; current state separate from immutable attempts                   |
-| `outbound_occurrences` / M2 | user, outbound ID, occurrence ID                                                                           | Join table supports digests and retries; owner-aware FKs                             |
-| `send_attempts` / M2        | outbound, attempt number, started/finished, provider ID, outcome, error code                               | Unique outbound + attempt; provider ID unique in phone scope when present            |
-| `delivery_events` / M2      | provider ID, status, provider event time, raw event ref, matched attempt                                   | Unique status identity; unmatched index; retain out-of-order observations            |
-| `usage_events` / M1–M3      | user, reservation key, type, units, tokens, estimated/settled cost, rate version                           | Append-only accounting; unique operation + charge type                               |
-| `usage_counters` / M3       | user, period, reserved + settled units/cost                                                                | Atomic reserve/check/update; period definition explicit                              |
-| `memories` / M4             | user, nullable plaintext, ciphertext envelope, provenance, supersedes ID, expiry, model/dimensions         | Check plaintext XOR ciphertext; no secret plaintext/vector; owner-aware supersession |
-| `memory_embeddings` / M4    | user, memory ID, embedding model/version, vector                                                           | Dimension tied to model migration; tenant-filtered retrieval tests                   |
-| `calendar_connections` / M4 | user, provider, account, encrypted access/refresh envelopes, expiry/state                                  | Distinct nonce/tag for each encrypted value; unique active connection                |
-| `privacy_jobs` / M3         | user, export/delete request, verified state, due time, completion                                          | Deletion cancels work and external tokens before purging; auditable job state        |
+| Entity / milestone          | Important fields                                                                                           | Constraints and indexes                                                                    |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `users` / M1                | UUID, normalized phone identity, zone, language, consent version/time, service-window expiry, deleted time | Unique channel + business phone + sender; timezone must be confirmed                       |
+| `inbound_messages` / M1     | user, ingress event, status, context, processed time                                                       | Unique ingress event; user + sequence pending index                                        |
+| `action_plans` / M1         | inbound ID, version, model/prompt IDs, validated decision                                                  | One persisted active plan per message; attempts reuse plan                                 |
+| `action_receipts` / M1      | user, action key, entity kind/ID, result                                                                   | Unique user + action key; inserted with entity mutation                                    |
+| `lists` / M1                | user, name, archived/deleted/created/updated                                                               | Unique active user + lower(name); unique (user,id)                                         |
+| `list_items` / M1           | user, list, text, sort position, done/deleted                                                              | Composite (user,list) FK; lock list for reorder; optional trigram index                    |
+| `reminders` / M1–M2         | user, title, next due, lifecycle, delivery mode, schedule version, source                                  | Partial due index on pending/nondeleted; unique (user,id); owner-aware references          |
+| Recurrence fields / M2      | local time, IANA zone, start date, RRULE, end                                                              | All-or-none rule/time/zone; supported subset validation                                    |
+| `reminder_occurrences` / M2 | user, reminder, original instant, promised delivery instant, status, schedule version                      | Unique (reminder, schedule version, original instant); composite owner FK; due index       |
+| `outbound_messages` / M1–M2 | user, idempotency key, message kind/template/locale, payload, available time, status                       | Unique logical key; current state separate from immutable attempts                         |
+| `outbound_occurrences` / M2 | user, outbound ID, occurrence ID                                                                           | Join table supports digests and retries; owner-aware FKs                                   |
+| `send_attempts` / M2        | outbound, attempt number, started/finished, provider ID, outcome, error code                               | Unique outbound + attempt; provider ID unique in phone scope when present                  |
+| `delivery_events` / M2      | provider ID, status, provider event time, raw event ref, matched attempt                                   | Unique status identity; unmatched index; retain out-of-order observations                  |
+| `usage_events` / M1–M3      | user, reservation key, type, units, tokens, estimated/settled cost, rate version                           | Append-only accounting; unique operation + charge type                                     |
+| `usage_counters` / M3       | user, period, reserved + settled units/cost                                                                | Atomic reserve/check/update; period definition explicit                                    |
+| `memories` / M4             | user, nullable plaintext, ciphertext envelope, provenance, supersedes ID, expiry, model/dimensions         | Check plaintext XOR ciphertext; no secret plaintext/vector; owner-aware supersession       |
+| `memory_embeddings` / M4    | user, memory ID, embedding model/version, vector                                                           | Dimension tied to model migration; tenant-filtered retrieval tests                         |
+| `calendar_connections` / M4 | user, provider, account, encrypted access/refresh envelopes, expiry/state                                  | Distinct nonce/tag for each encrypted value; unique active connection                      |
+| `privacy_requests` / M3     | user, export/delete kind, reference, status, expiry                                                        | Confirmed deletion cancels work; administrator erasure waits for unresolved external calls |
 
 ## Conventions
 

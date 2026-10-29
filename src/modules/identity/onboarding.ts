@@ -8,6 +8,7 @@ export const CONSENT_NOTICE =
   'Production requires a new notice naming processors and retention before real users or AI calls.';
 
 export interface IdentityState {
+  deletion_requested_at?: Date | null;
   consent_version: string | null;
   consent_at: Date | null;
   consent_token: string | null;
@@ -40,6 +41,7 @@ export function canonicalTimezone(input: string): string | null {
 
 export function hasOnboarded(state: IdentityState): boolean {
   return (
+    !state.deletion_requested_at &&
     !state.paused &&
     state.consent_version === CONSENT_VERSION &&
     !!state.consent_at &&

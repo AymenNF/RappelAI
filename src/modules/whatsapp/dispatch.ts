@@ -40,6 +40,9 @@ export class TestReplySender {
     let message: z.infer<typeof textMessage>;
     try {
       await client.query('BEGIN');
+      await client.query(
+        "SELECT pg_advisory_xact_lock_shared(hashtextextended(current_schema()||':privacy',0))",
+      );
       // Match the usage service lock order: policy before user. Pause fences later authorizations.
       const policy = (
         await client.query('SELECT enabled FROM usage_policy WHERE singleton FOR SHARE')
@@ -87,6 +90,7 @@ export class TestReplySender {
       const body = planReply ? source.body : source.reply_text;
       if (!body) throw new SendBlockedError('No stored reply');
       const eligible =
+        !user.deletion_requested_at &&
         source.same_consent &&
         source.same_zone &&
         (planReply

@@ -21,6 +21,9 @@ export class ReminderScheduler {
     let discard = false;
     try {
       await client.query('BEGIN');
+      await client.query(
+        "SELECT pg_advisory_xact_lock_shared(hashtextextended(current_schema()||':privacy',0))",
+      );
       // Keep microseconds in PostgreSQL. One fixed database cutoff per sweep, never the host clock.
       const cutoff = (await client.query('SELECT clock_timestamp()::text AS cutoff')).rows[0]
         .cutoff;

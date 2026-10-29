@@ -63,6 +63,9 @@ console.log(
 try {
   while (!stopping) {
     try {
+      const cancelled = await queue.cancelDeleted();
+      if (cancelled)
+        console.log(JSON.stringify({ event: 'deletion_work_cancelled', count: cancelled }));
       const recovered = await queue.recoverExpired();
       const deliveriesRecovered = await deliveryRecovery.recover();
       if (deliveriesRecovered)

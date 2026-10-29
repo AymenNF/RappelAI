@@ -35,6 +35,9 @@ export class DeliveryRecovery {
     let discard = false;
     try {
       await client.query('BEGIN');
+      await client.query(
+        "SELECT pg_advisory_xact_lock_shared(hashtextextended(current_schema()||':privacy',0))",
+      );
       const result = await operation(client);
       await client.query('COMMIT');
       return result;

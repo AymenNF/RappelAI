@@ -9,6 +9,9 @@ export async function persistSendResult(pool: Pool, id: string, result: SendResu
   let discard = false;
   try {
     await client.query('BEGIN');
+    await client.query(
+      "SELECT pg_advisory_xact_lock_shared(hashtextextended(current_schema()||':privacy',0))",
+    );
     const address = (
       await client.query('SELECT user_id,phone_number_id FROM whatsapp_attempts WHERE id=$1', [id])
     ).rows[0];

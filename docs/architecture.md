@@ -1,5 +1,7 @@
 # Architecture and system design
 
+M3-02 uses confirmed account deletion to stop new activity, with administrator erasure held until external outcomes are resolved. Shared runtime/exclusive maintenance locks serialize erasure against ingress and result persistence. A keyed address fingerprint prevents replay from recreating the account. Exports are account-scoped local JSON; retention has a bounded dry-run/apply CLI. See [privacy](privacy.md).
+
 M3-01 gates request admission, model/send authorization and inventory expansion with transactional quotas. Exact due promises stay unchanged when sending is blocked. Queue capacity uses a database lock across API processes; safety controls and receipt processing remain available. See [quotas](quotas.md).
 
 M2-07 separates original due times from explicitly confirmed delivery promises. Preference changes never reschedule exact reminders. Deferred entries use the existing occurrence/outbound/attempt path with a later availability instant; digest entries are individual messages, not aggregate summaries. See [delivery preferences](delivery-preferences.md).
@@ -111,7 +113,7 @@ M1-07 implements this boundary for test replies: one durable attempt per source 
 
 The transport staging tables are internal and pre-user; a narrow ingress role may insert/dedupe only. Product tables use tenant-aware foreign keys and forced RLS, with `SET LOCAL app.user_id` inside every application transaction. Runtime roles must not own tables or have superuser/BYPASSRLS privileges. Scheduler access is narrow and explicit. Test cross-user reads, writes, foreign keys and pooled-connection reuse before any user CRUD endpoint ships.
 
-Consent and timezone confirmation precede model processing. Raw content never enters ordinary logs. Model traces use redacted metadata by default. Proposed staging retention is 7 days for unconsented/unprocessed content, 30 days for opted-in raw messages during beta; final policy is an explicit product decision. Secret storage is unsupported in the first version; later encryption must cover inbox, traces, backups and memory, not just a single memory column.
+Consent and timezone confirmation precede model processing. Raw content never enters ordinary logs. Model traces use redacted metadata by default. M3-02 defaults to redacting completed raw payloads after 30 days, while preserving unfinished work and unresolved outcomes. Account-owned business records remain until confirmed deletion. Staging/log/trace/backup expiry and final real-user policy still require an explicit product decision; see [privacy](privacy.md). Secret storage is unsupported in the first version; later encryption must cover inbox, traces, backups and memory, not just a single memory column.
 
 M1-05 reserves model budget atomically in global/user UTC-month counters, then settles trusted token usage separately from plan persistence. It holds uncertain attempts and rechecks the global switch at dispatch. See [usage controls](usage-controls.md). Send-budget integration is a future delivery requirement. Rate-limit onboarding and processing separately. Quota exhaustion must be visible; avoid accepting reminders that cannot be delivered under the current plan. A global kill switch pauses new spend while preserving durable work.
 

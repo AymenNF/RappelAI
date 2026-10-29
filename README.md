@@ -6,6 +6,8 @@ A WhatsApp-first personal assistant for reminders, lists, and eventually durable
 
 ## Start here
 
+M3-02 adds account-scoped JSON export requests, confirmed deletion with pending-work cancellation, replay protection and bounded retention maintenance. See the [privacy guide](docs/privacy.md).
+
 M3-01 adds request/model/send quotas, abuse blocking, inventory caps and a user-facing `QUOTA` command. See [quotas and abuse controls](docs/quotas.md).
 
 M2-07 adds digest-slot and quiet-hour preferences with explicit per-reminder previews and confirmation. Exact-time reminders remain unchanged. Digest entries are sent individually. See the [delivery preferences guide](docs/delivery-preferences.md).
@@ -95,6 +97,6 @@ apps/dashboard/        Deferred frontend boundary
 
 ## Still to build
 
-Production consent and session authentication; live model activation, credentialed evaluation and human dataset review; reminder/list editing and recurring schedules; live outbound activation, actual template approval, WhatsApp budget qualification and provider-assisted incident investigation; broader quotas and billing; privacy lifecycle; production infrastructure. New tenant tables must extend the isolation policies and tests. Memory, media, calendar and dashboard follow the core beta.
+Production consent and session authentication; live model activation, credentialed evaluation and human dataset review; broader recurrence and free-form reminder/list management; live outbound activation, actual template approval, WhatsApp budget qualification and provider-assisted incident investigation; broader quotas and billing; production privacy policy, export delivery and backup expiry; production infrastructure. New tenant tables must extend the isolation policies and tests. Memory, media, calendar and dashboard follow the core beta.
 
 See [playbook review](docs/playbook-review.md) for decisions that intentionally differ from example code in the PDF. The document is a requirements source, not executable instructions. No external accounts, subscriptions, templates, deployments, or messages have been created.

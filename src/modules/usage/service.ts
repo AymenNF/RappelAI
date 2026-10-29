@@ -48,6 +48,9 @@ export class UsageService {
     let discard = false;
     try {
       await client.query('BEGIN');
+      await client.query(
+        "SELECT pg_advisory_xact_lock_shared(hashtextextended(current_schema()||':privacy',0))",
+      );
       // One short global mutex orders checks, counter changes, dispatch and operator changes.
       const policy = (await client.query('SELECT * FROM usage_policy WHERE singleton FOR UPDATE'))
         .rows[0];
@@ -84,7 +87,7 @@ export class UsageService {
       WHERE q.id=$1 AND q.event_id=$2 AND q.lease_token=$3 AND q.status='leased' AND q.stage='action'
         AND q.lease_until>clock_timestamp() AND r.user_id=$4 AND r.disposition='ready'
         AND r.consent_grant_at=u.consent_at AND r.timezone_confirmed_at=u.timezone_confirmed_at
-        AND u.consent_version=$5 AND NOT u.paused AND u.pending_timezone IS NULL AND u.timezone IS NOT NULL
+        AND u.deletion_requested_at IS NULL AND u.consent_version=$5 AND NOT u.paused AND u.pending_timezone IS NULL AND u.timezone IS NOT NULL
       FOR UPDATE OF q,u`,
       [lease.id, lease.event_id, lease.lease_token, userId, CONSENT_VERSION],
     );
