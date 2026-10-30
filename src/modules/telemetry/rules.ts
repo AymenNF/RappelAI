@@ -1,4 +1,39 @@
 export const rules = {
+  backup_overdue: {
+    severity: 'critical',
+    action:
+      'No recent manifest-verified base backup with archived WAL. Run/check staging:backup; keep launch blocked and verify storage separately.',
+  },
+  backup_failed: {
+    severity: 'critical',
+    action:
+      'A backup failed after the last verified backup. Inspect the private backup run and storage, repair the cause and create a fresh verified backup.',
+  },
+  backup_stalled: {
+    severity: 'critical',
+    action:
+      'A backup exceeded its duration limit. Inspect its process before marking the overdue run abandoned; do not delete backup or WAL files.',
+  },
+  archive_disabled: {
+    severity: 'critical',
+    action:
+      'Expected PostgreSQL WAL archiving is disabled. Restore the reviewed archive configuration and test recovery before launch.',
+  },
+  archive_failed: {
+    severity: 'critical',
+    action:
+      'The latest recorded archive failure has no later success. Inspect archiver/storage health and pending WAL; never infer archive continuity from the last filename.',
+  },
+  archive_stalled: {
+    severity: 'critical',
+    action:
+      'WAL has waited beyond the archive limit. Inspect archive command, permissions and disk capacity; preserve the WAL chain.',
+  },
+  backup_probe_failed: {
+    severity: 'critical',
+    action:
+      'Archive health could not be observed. Check the restricted probe/provider monitoring capability; unavailable evidence is not a healthy archive.',
+  },
   api_missing: {
     severity: 'critical',
     action:

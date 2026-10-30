@@ -40,3 +40,5 @@ Statuses are local planning status, not remotely created issues. “Ready” mea
 | M6-02  | P2 / Deferred                | Plans/billing and additional channels                           | Usage evidence  | Measured demand and viable margins                                                                                                          |
 
 P0 protects the core product promise or unblocks it. P1 completes a useful beta. P2 expands the product. Move one issue into Doing at a time; keep everything else visible rather than partially implemented.
+
+After M3-06, use [LR-01 through LR-08](launch-readiness.md) before starting M4. LR-01 adds local backup/archive monitoring and a real archive failure/recovery drill. The remaining tasks cover hosted security, independent recovery, live evaluations/templates, privacy/access, paging and controlled rollout. Their external reviews remain pending; local preparation never enables beta.

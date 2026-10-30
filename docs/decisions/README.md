@@ -10,19 +10,19 @@ Accepted here means a working scaffold/design choice, open to revision with evid
 
 ## Open product and deployment choices
 
-| Question                                             | Working assumption                                                 | Resolve by                                 |
-| ---------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------ |
-| First audience/country/languages                     | Small private beta; English fixtures, Toronto dates for tests only | Day 0                                      |
-| Local development capacity                           | Solo developer                                                     | First weekly planning                      |
-| Provider eligibility for personal-assistant use case | Unverified; must check current account/policy                      | Before live integration commitment         |
-| Model provider and models                            | OpenAI first; model ID unselected, behind adapter                  | M1 evaluation                              |
-| Region/hosting/data residency                        | One region, managed Postgres with PITR                             | Before real-data staging                   |
-| User authentication                                  | Select a bounded session/OTP or managed flow                       | Before user API                            |
-| Digest and time defaults                             | Exact times immediate; ambiguous date/time asks                    | M1 product fixtures                        |
-| DST gaps/folds                                       | Shift gap forward, first fold occurrence once                      | M2 tests and UX review                     |
-| Retention                                            | Propose 7-day unconsented staging, 30-day beta raw history         | Before real users                          |
-| Secret storage                                       | Unsupported in first release                                       | Only revisit with explicit product need    |
-| Pricing/allowances/tiers                             | No fixed vendor rates assumed                                      | Before plans or paid launch                |
-| ORM                                                  | Direct parameterized SQL for foundation                            | Add only with clear migration/type benefit |
+| Question                                             | Working assumption                                                                                      | Resolve by                                 |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| First audience/country/languages                     | English confirmed for initial beta; audience/country undecided; Toronto dates remain test fixtures only | Before provider/privacy review             |
+| Local development capacity                           | Solo developer                                                                                          | First weekly planning                      |
+| Provider eligibility for personal-assistant use case | Unverified; must check current account/policy                                                           | Before live integration commitment         |
+| Model provider and models                            | OpenAI first; API project not ready, model ID unselected, behind adapter                                | Before live evaluation                     |
+| Region/hosting/data residency                        | One region, managed Postgres with PITR                                                                  | Before real-data staging                   |
+| User authentication                                  | Select a bounded session/OTP or managed flow                                                            | Before user API                            |
+| Digest and time defaults                             | Exact times immediate; ambiguous date/time asks                                                         | M1 product fixtures                        |
+| DST gaps/folds                                       | Shift gap forward, first fold occurrence once                                                           | M2 tests and UX review                     |
+| Retention                                            | Propose 7-day unconsented staging, 30-day beta raw history                                              | Before real users                          |
+| Secret storage                                       | Unsupported in first release                                                                            | Only revisit with explicit product need    |
+| Pricing/allowances/tiers                             | No fixed vendor rates assumed                                                                           | Before plans or paid launch                |
+| ORM                                                  | Direct parameterized SQL for foundation                                                                 | Add only with clear migration/type benefit |
 
 Use one new ADR for a material change. Record context, decision, alternatives considered, consequences and evidence. Do not silently rewrite an accepted decision to erase why it was chosen.

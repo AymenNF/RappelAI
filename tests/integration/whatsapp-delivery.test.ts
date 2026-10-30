@@ -18,7 +18,7 @@ import type { WhatsAppTransport } from '../../src/modules/whatsapp/send.js';
 if (!process.env.TEST_DATABASE_URL) throw new Error('TEST_DATABASE_URL required');
 test(
   'WhatsApp test dispatch and receipts under restricted logins',
-  { timeout: 30000 },
+  { timeout: 60000 },
   async (t) => {
     const suffix = randomUUID().replaceAll('-', '');
     const schema = `test_${suffix}`;

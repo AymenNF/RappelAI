@@ -14,6 +14,8 @@ Rollback: stop new spending if needed; roll back compatible application image; p
 
 ## Local work recovery
 
+Backup/archive alerts are available through the same durable lifecycle after migration 0023 and explicit monitoring enablement. See [remaining launch work](launch-readiness.md) for thresholds, commands and external requirements. These local alerts do not send pages or verify off-site storage.
+
 M1-03 recovers expired leases on each worker cycle, caps retries and preserves per-user order. Inspect dead work, repair its cause and use `npm run work:retry -- <dead-work-uuid> <operator-label>`. See the [work processing runbook](work-processing.md). M3-03 adds detection and durable alert state; M3-04 supplies local Docker restart policies and health checks. External paging and host/backup supervision remain to be configured.
 
 ## Spending controls

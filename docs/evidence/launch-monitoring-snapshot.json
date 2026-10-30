@@ -1,0 +1,74 @@
+{
+  "http": {
+    "success": 2,
+    "requests": 3,
+    "latency_50": 3,
+    "client_error": 1
+  },
+  "model": [],
+  "queue": [],
+  "backup": {
+    "archive": {
+      "available": true,
+      "archiveMode": "on",
+      "pendingCount": 0,
+      "failureOutstanding": false,
+      "oldestPendingSeconds": 0
+    },
+    "enabled": true,
+    "latestState": "verified",
+    "storageScope": "local_only",
+    "lastVerifiedAt": "2026-10-29T22:34:19.178413-04:00",
+    "latestAttemptAt": "2026-10-29T22:34:16.739178-04:00",
+    "offsiteVerified": false,
+    "maxBackupAgeSeconds": 90000,
+    "maxArchiveWaitSeconds": 300,
+    "maxBackupDurationSeconds": 3600
+  },
+  "runtime": [
+    {
+      "component": "api",
+      "heartbeatAt": "2026-10-29T22:36:13.324486-04:00"
+    },
+    {
+      "component": "worker",
+      "heartbeatAt": "2026-10-29T22:35:58.107652-04:00"
+    }
+  ],
+  "signals": {
+    "api_slow": 0,
+    "work_dead": 0,
+    "api_errors": 0,
+    "api_missing": 0,
+    "send_failed": 0,
+    "api_overload": 0,
+    "send_expired": 0,
+    "send_unknown": 0,
+    "work_stalled": 0,
+    "backup_failed": 0,
+    "lease_expired": 0,
+    "outbound_late": 0,
+    "send_conflict": 0,
+    "worker_errors": 0,
+    "archive_failed": 0,
+    "backup_overdue": 0,
+    "backup_stalled": 0,
+    "reminders_late": 0,
+    "spend_near_cap": 0,
+    "worker_missing": 0,
+    "archive_stalled": 0,
+    "privacy_waiting": 0,
+    "archive_disabled": 0,
+    "model_unresolved": 0,
+    "receipts_unmatched": 0,
+    "backup_probe_failed": 0
+  },
+  "delivery": [],
+  "spending": {
+    "enabled": false,
+    "capMicros": "0",
+    "spentMicros": "0",
+    "reservedMicros": "0"
+  },
+  "observedAt": "2026-10-29T22:36:14.862881-04:00"
+}

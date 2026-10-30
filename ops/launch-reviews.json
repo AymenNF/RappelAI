@@ -5,9 +5,9 @@
       "id": "regression_suite",
       "status": "verified",
       "owner": "Codex local verification",
-      "evidence": "docs/verification.md: M3-06; npm run check (97 unit tests, 60 eval cases, build/types/format); npm run test:integration (227 tests/subtests)",
-      "reviewedAt": "2026-10-30T01:55:07.275Z",
-      "imageId": "sha256:0e2c04392681be3052e38a6a9d74b9fb331c0cce0cd3f3edbde3d3fa79f4d99d"
+      "evidence": "docs/verification.md: launch-readiness follow-up; npm run check (100 unit tests, 60 eval cases, build/types/format); npm run test:integration (232 tests/subtests)",
+      "reviewedAt": "2026-10-30T02:38:19.439Z",
+      "imageId": "sha256:3c2ba98868b633b333217ed728251a80761524a54227495a33e6eef5d5088172"
     },
     {
       "id": "live_model_evaluation",

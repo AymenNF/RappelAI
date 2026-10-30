@@ -39,6 +39,7 @@
     "staging:setup": "tsx scripts/staging-setup.ts",
     "staging:smoke": "tsx scripts/staging-smoke.ts",
     "staging:backup": "tsx scripts/staging-backup.ts",
+    "backup:control": "tsx scripts/backup-control.ts",
     "restore:control": "tsx scripts/recovery-control.ts",
     "restore:drill": "tsx scripts/restore-drill.ts",
     "qualify:run": "tsx scripts/qualify.ts",

@@ -124,7 +124,7 @@ try {
     '-c',
     'archive_mode=on',
     '-c',
-    'archive_command=sh /archive-wal.sh %p %f',
+    'archive_command=test ! -f /wal-archive/pause-archive && sh /archive-wal.sh %p %f',
   ]);
   await waitFor(async () => (await sql(source, 'SELECT 1')) === '1');
   await app(source, 'migrate');
@@ -147,6 +147,28 @@ try {
     'fast',
   ]);
   await docker(['exec', '-u', 'postgres', source, 'pg_verifybackup', '/basebackup']);
+  phase = 'archive-failure-monitoring';
+  console.log(
+    'Exercising archive failure, a real 60-second backlog and alert recovery in the disposable source.',
+  );
+  await sql(source, 'UPDATE backup_monitoring_policy SET enabled=true,max_archive_wait_seconds=60');
+  const observeArchive = async () =>
+    JSON.parse(await sql(source, 'SET ROLE memorae_monitor; SELECT backup_observation();'));
+  assert.equal((await observeArchive()).archive.available, true);
+  await docker(['exec', source, 'touch', '/wal-archive/pause-archive']);
+  await sql(source, 'SELECT pg_switch_wal()');
+  await waitFor(async () => (await observeArchive()).signals.archive_failed === 1);
+  await waitFor(async () => (await observeArchive()).signals.archive_stalled === 1);
+  await docker(['exec', source, 'rm', '/wal-archive/pause-archive']);
+  await waitFor(async () => {
+    const observed = await observeArchive();
+    return (
+      observed.archive.pendingCount === 0 &&
+      observed.signals.archive_failed === 0 &&
+      observed.signals.archive_stalled === 0
+    );
+  });
+  // The restored target must be reviewed independently; these same-host probes are not an off-site attestation.
   await sql(source, "INSERT INTO drill_markers VALUES('after-base')");
   const restorePoint = `memorae_target_${id}`;
   const wal = await sql(
@@ -227,6 +249,7 @@ try {
     restoreSeconds: (Date.now() - restoreBegan) / 1000,
     totalSeconds: (Date.now() - began) / 1000,
     verification,
+    archiveMonitoring: { failureDetected: true, backlogDetected: true, recovered: true },
     limits: [
       'Local same-host exercise; no off-site backup or production RPO/RTO guarantee',
       'Synthetic provider evidence only; no external sends',

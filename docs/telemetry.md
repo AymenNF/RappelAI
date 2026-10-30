@@ -39,6 +39,8 @@ Each queue page returns `items` and `next`. To continue, append the returned `cr
 
 ## Initial alert rules
 
+Migration 0023 adds opt-in backup and WAL archive checks to this same alert lifecycle: overdue/failed/stuck backups, disabled/failing/stalled archival, and an unavailable archive probe. Their defaults and administrator controls are documented in [launch-readiness work](launch-readiness.md). They expose aggregate health without filesystem privileges, do not notify an external paging service, and do not establish off-site recovery.
+
 | Condition                               | Trigger                                                                          | Main response                                                         |
 | --------------------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | Expected API/worker heartbeat           | Missing or at least 120s old                                                     | Check process, database and flush/cycle health                        |

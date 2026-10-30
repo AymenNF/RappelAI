@@ -91,6 +91,8 @@ Next, choose the intended audience and host, complete hosted security/off-site r
 
 ## M4 — useful memory (5–8 days)
 
+Before starting M4, follow [LR-01 through LR-08](launch-readiness.md) to close the remaining core-beta launch requirements. M3-06 is committed as `34edc99`; backup/archive monitoring is the first local implementation in that follow-up. Actual beta launch stays gated on external evidence and owner approval.
+
 - Confirm what users want remembered and whether inferred extraction is opt-in.
 - pgvector schema with chosen model/dimension, source provenance and embedding jobs.
 - Hybrid lexical/vector retrieval scoped to user; measure recall with a labeled set.

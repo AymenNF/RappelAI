@@ -6,6 +6,8 @@ A WhatsApp-first personal assistant for reminders, lists, and eventually durable
 
 ## Start here
 
+M3-06 is committed and pushed. The next work closes launch-readiness gaps while beta remains disabled; start with the [remaining launch work](docs/launch-readiness.md), including backup/archive monitoring and the external decisions still needed.
+
 M3-06 adds private beta preparation, category-based feedback with audited triage, and daily cost/delivery review reports. Launch stays blocked until readiness and owner reviews pass. Read the [private beta guide](docs/private-beta.md) for commands, draft templates and the daily routine.
 
 M3-05 adds repeatable process/database failure exercises, bounded load measurements and a launch-readiness checker. The local qualification run passed; hosted/provider launch gates remain pending. Read [qualification and readiness](docs/qualification.md).

@@ -1,0 +1,66 @@
+{
+  "version": "beta-preparation-v1",
+  "imageId": "sha256:3c2ba98868b633b333217ed728251a80761524a54227495a33e6eef5d5088172",
+  "mode": "preparation_only",
+  "readyForOwnerLaunchReview": false,
+  "launchEnabled": false,
+  "checks": [
+    {
+      "id": "evidence_identity_freshness",
+      "passed": true
+    },
+    {
+      "id": "local_failure_and_load_integrity",
+      "passed": true
+    },
+    {
+      "id": "local_latency_and_drain_target",
+      "passed": true
+    },
+    {
+      "id": "regression_suite",
+      "passed": true
+    },
+    {
+      "id": "live_model_evaluation",
+      "passed": false
+    },
+    {
+      "id": "provider_templates_delivery",
+      "passed": false
+    },
+    {
+      "id": "production_privacy",
+      "passed": false
+    },
+    {
+      "id": "hosted_security",
+      "passed": false
+    },
+    {
+      "id": "offsite_restore",
+      "passed": false
+    },
+    {
+      "id": "paging_and_ownership",
+      "passed": false
+    },
+    {
+      "id": "beta_rollout",
+      "passed": false
+    },
+    {
+      "id": "beta_responsibilities",
+      "passed": false
+    },
+    {
+      "id": "beta_cohort_prepared",
+      "passed": false
+    },
+    {
+      "id": "beta_owner_approval",
+      "passed": false
+    }
+  ],
+  "note": "Preparation does not send invitations, enroll users, activate providers or enable spending. Complete readiness and obtain explicit launch authorization."
+}

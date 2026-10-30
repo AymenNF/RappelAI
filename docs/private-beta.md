@@ -1,6 +1,6 @@
 # M3-06: prepare a private beta while launch stays blocked
 
-M3-05 is committed and pushed as `2d3eba8`. M3-06 adds preparation and review tools, a user feedback command and daily operational reports. **No beta has launched, no participants have been invited, and provider activation remains disabled.**
+M3-05 is committed and pushed as `2d3eba8`, and M3-06 as `34edc99`. M3-06 adds preparation and review tools, a user feedback command and daily operational reports. **No beta has launched, no participants have been invited, and provider activation remains disabled.** Continue with the [remaining launch work](launch-readiness.md).
 
 The plan starts with up to five proposed testers, with an absolute planning ceiling of twenty. That ceiling is a planning constraint, not evidence that the system can serve twenty real users. Grow only after real delivery, cost and support results justify it.
 
@@ -9,8 +9,8 @@ The plan starts with up to five proposed testers, with an absolute planning ceil
 `ops/beta-plan.json` is the current draft. Fill the operator, incident owner and private support channel; use aliases such as `beta-01` for proposed participants. Store the name/address/account mapping in a separately protected location, never in Git. The plan deliberately starts with an empty cohort, blank responsibilities and no owner approval.
 
 ```powershell
-npm run beta:prepare -- docs/evidence/m3-06-qualification.json sha256:<expected-candidate-image-id>
-npm run beta:prepare -- docs/evidence/m3-06-qualification.json sha256:<expected-candidate-image-id> --require-ready
+npm run beta:prepare -- docs/evidence/launch-qualification.json sha256:<expected-candidate-image-id>
+npm run beta:prepare -- docs/evidence/launch-qualification.json sha256:<expected-candidate-image-id> --require-ready
 ```
 
 The preparation check runs the existing launch-readiness checks, then checks responsibilities, a bounded/unique alias list and fresh owner approval for the same image. Missing/stale/mismatched evidence blocks it. Strict mode exits nonzero while blocked. Even a fully reviewed result says `launchEnabled: false`: this command cannot invite users, activate providers, deploy or change spending. It only says whether the plan is ready for the owner's launch review.

@@ -9,10 +9,18 @@ export interface OperationalSnapshot {
   spending: { enabled: boolean; capMicros: string; reservedMicros: string; spentMicros: string };
   runtime: { component: string; heartbeatAt: string }[];
   http: Record<string, number>;
+  backup: {
+    enabled: boolean;
+    lastVerifiedAt: string | null;
+    latestState: string | null;
+    offsiteVerified: false;
+    [key: string]: unknown;
+  };
 }
 // One statement snapshot: no content-bearing fields or account/provider identifiers.
 export async function collectSnapshot(c: PoolClient): Promise<OperationalSnapshot> {
-  const result = await c.query(`WITH moment AS MATERIALIZED (SELECT clock_timestamp() AS at),
+  const result =
+    await c.query(`WITH backup AS MATERIALIZED (SELECT backup_observation() AS data), moment AS MATERIALIZED (SELECT clock_timestamp() AS at),
     recent AS (SELECT component,metric,sum(value)::bigint AS n FROM telemetry_counters,moment
       WHERE minute>=date_trunc('minute',at)-interval '4 minutes' GROUP BY component,metric),
     conflicts AS (SELECT DISTINCT a.attempt_id FROM delivery_recovery_audit a
@@ -43,7 +51,8 @@ export async function collectSnapshot(c: PoolClient): Promise<OperationalSnapsho
         'privacy_waiting',(SELECT count(*) FROM users WHERE deletion_requested_at<=at-interval '1 hour'),
         'spend_near_cap',CASE WHEN u.enabled AND u.global_monthly_micros>0 AND
           COALESCE((SELECT reserved_micros::numeric+spent_micros FROM usage_global_periods WHERE period=date_trunc('month',at AT TIME ZONE 'UTC')::date),0)>=u.global_monthly_micros::numeric*0.9 THEN 1 ELSE 0 END
-      ),
+      ) || (b.data->'signals'),
+      'backup',b.data-'signals',
       'queue',COALESCE((SELECT jsonb_agg(x) FROM (SELECT stage,status,count(*)::integer AS count,
         GREATEST(0,extract(epoch FROM (SELECT at FROM moment)-min(created_at)))::float8 AS "oldestAgeSeconds"
         FROM work_outbox WHERE status<>'completed' GROUP BY stage,status ORDER BY stage,status) x),'[]'),
@@ -54,6 +63,6 @@ export async function collectSnapshot(c: PoolClient): Promise<OperationalSnapsho
         'spentMicros',COALESCE((SELECT spent_micros::text FROM usage_global_periods WHERE period=date_trunc('month',at AT TIME ZONE 'UTC')::date),'0')),
       'runtime',COALESCE((SELECT jsonb_agg(jsonb_build_object('component',component,'heartbeatAt',heartbeat_at) ORDER BY component) FROM telemetry_runtime),'[]'),
       'http',COALESCE((SELECT jsonb_object_agg(metric,n) FROM recent WHERE component='api'),'{}')
-    ) AS data FROM moment,monitoring_policy p,usage_policy u WHERE p.singleton AND u.singleton`);
+    ) AS data FROM moment,monitoring_policy p,usage_policy u,backup b WHERE p.singleton AND u.singleton`);
   return result.rows[0].data;
 }

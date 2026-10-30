@@ -1,0 +1,11 @@
+{
+  "version": "ci-observation-v1",
+  "observedAt": "2026-10-30T02:31:51.812Z",
+  "repository": "AymenNF/RappelAI",
+  "commit": "34edc997b1ad734404d0c5b2162a29b78a8ec942",
+  "runId": 40990794235,
+  "url": "https://github.com/AymenNF/RappelAI/actions/runs/40990794235",
+  "status": "completed",
+  "conclusion": "success",
+  "note": "GitHub CI result for committed M3-06 only; subsequent local launch-readiness changes are not included."
+}

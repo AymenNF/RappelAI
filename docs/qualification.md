@@ -2,7 +2,7 @@
 
 This milestone tests how the system behaves when processes or the database fail. It also measures a small synthetic load and records the remaining launch gates. Passing these local exercises does not enable real WhatsApp sends, paid models, or a public beta.
 
-M3-04 is committed and pushed as `b63d913`. M3-05 changes remain local until separately committed. No database migration is required for M3-05.
+M3-04 is committed and pushed as `b63d913`, M3-05 as `2d3eba8`, and M3-06 as `34edc99`. No database migration was required for M3-05 itself. Continue with [remaining launch work](launch-readiness.md).
 
 ## Run the disposable environment
 
