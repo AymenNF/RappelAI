@@ -9,4 +9,5 @@ evals/results
 .staging-local
 .restore-drills
 .qualification
+.beta-private
 exports

@@ -1,0 +1,14 @@
+{
+  "version": "beta-daily-signoff-draft-v1",
+  "utcDay": "YYYY-MM-DD",
+  "reportFile": "private report filename",
+  "reportSha256": "record the reviewed file hash",
+  "reviewer": "",
+  "reviewedAt": null,
+  "decision": "hold",
+  "costsChecked": false,
+  "deliveryEvidenceChecked": false,
+  "feedbackTriaged": false,
+  "followUpIssueReferences": [],
+  "note": "Human review record only. Does not change launch, access, provider or spending controls."
+}

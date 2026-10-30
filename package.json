@@ -42,7 +42,9 @@
     "restore:control": "tsx scripts/recovery-control.ts",
     "restore:drill": "tsx scripts/restore-drill.ts",
     "qualify:run": "tsx scripts/qualify.ts",
-    "launch:check": "tsx scripts/launch-check.ts"
+    "launch:check": "tsx scripts/launch-check.ts",
+    "beta:prepare": "tsx scripts/beta-prepare.ts",
+    "beta:control": "tsx scripts/beta-control.ts"
   },
   "dependencies": {
     "@js-temporal/polyfill": "0.5.1",

@@ -6,6 +6,8 @@ A WhatsApp-first personal assistant for reminders, lists, and eventually durable
 
 ## Start here
 
+M3-06 adds private beta preparation, category-based feedback with audited triage, and daily cost/delivery review reports. Launch stays blocked until readiness and owner reviews pass. Read the [private beta guide](docs/private-beta.md) for commands, draft templates and the daily routine.
+
 M3-05 adds repeatable process/database failure exercises, bounded load measurements and a launch-readiness checker. The local qualification run passed; hosted/provider launch gates remain pending. Read [qualification and readiness](docs/qualification.md).
 
 M3-04 adds a running local Docker staging environment, scoped file-mounted secrets, a restricted monitor login, verified physical backups and an isolated PITR restore drill. Read the [staging guide](docs/staging.md) and [backup/restore runbook](docs/backup-restore.md). Production and live provider activation remain pending.
@@ -67,6 +69,7 @@ src/
     identity/          Local consent, timezone and tenant profiles
     usage/             Spending reservations, limits and kill switch
     recovery/          Restore quarantine, deletion overlay and reviewed release
+    beta/              Feedback, daily reviews and gated beta preparation
   contracts/           Validated model decisions for the first slice
   config/              Environment validation
   db/                  PostgreSQL access and durable ingress

@@ -1,0 +1,13 @@
+{
+  "version": "beta-plan-v1",
+  "mode": "preparation_only",
+  "initialParticipants": 5,
+  "maximumParticipants": 20,
+  "operator": "",
+  "incidentOwner": "",
+  "supportChannel": "",
+  "dailyReviewTimeUtc": "14:00",
+  "dailyModelReviewMicros": "0",
+  "cohortAliases": [],
+  "rolloutApproval": { "approved": false, "imageId": null, "approvedAt": null }
+}

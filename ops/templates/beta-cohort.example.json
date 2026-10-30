@@ -1,0 +1,14 @@
+{
+  "version": "beta-cohort-draft-v1",
+  "participants": [
+    {
+      "alias": "beta-01",
+      "status": "proposed",
+      "invitedAt": null,
+      "consentVerifiedAt": null,
+      "timezoneVerifiedAt": null,
+      "withdrawnAt": null
+    }
+  ],
+  "note": "Private tracking template, not enrollment or access control. Keep contact/account mapping separately protected."
+}

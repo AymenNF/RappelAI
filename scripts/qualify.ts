@@ -146,13 +146,13 @@ const sql = (query: string) =>
     ],
     query,
   );
-const waitFor = async (fn: () => Promise<boolean>, timeout = 60000) => {
+const waitFor = async (fn: () => Promise<boolean>, timeout = 60000, condition = 'condition') => {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
     if (await fn().catch(() => false)) return;
     await setTimeout(500);
   }
-  throw new Error('Qualification condition timed out');
+  throw new Error(`Qualification ${condition} timed out`);
 };
 let base = '',
   phase = 'setup';
@@ -363,7 +363,11 @@ try {
     });
   await docker(['start', worker]);
   await exercise('unknown_send_crash', async () => {
+    // Seed constructs a synthetic identity in several writes. Do not let onboarding
+    // consume the ingress row before the fixture has completed those writes.
+    await docker(['stop', '-t', '10', worker]);
     await fixture(['seed', 'send'], true);
+    await docker(['start', worker]);
     const provider = await start('provider', 'ops/qualification-fixture', ['provider'], [], []);
     const count = () =>
       docker([
@@ -371,9 +375,9 @@ try {
         provider,
         'node',
         '-e',
-        "fetch('http://127.0.0.1:3001/count').then(r=>r.text()).then(console.log)",
+        "fetch('http://127.0.0.1:3001/count',{signal:AbortSignal.timeout(5000)}).then(r=>r.text()).then(console.log)",
       ]);
-    await waitFor(async () => (await count()) === '0');
+    await waitFor(async () => (await count()) === '0', 60000, 'provider startup');
     const sender = await start(
       'sender',
       'ops/qualification-fixture',
@@ -381,12 +385,21 @@ try {
       ['worker_database_url'],
       workerEnv,
     );
-    await waitFor(async () => (await count()) === '1');
+    try {
+      await waitFor(async () => (await count()) === '1', 60000, 'provider acceptance');
+    } catch (error) {
+      const states = await sql('SELECT state FROM whatsapp_attempts');
+      const exited = await docker(['inspect', '--format', '{{.State.Status}}', sender]);
+      throw new Error(
+        `${error instanceof Error ? error.message : 'Acceptance failed'}; sender=${exited}; attempts=${states || 'none'}`,
+      );
+    }
     await docker(['kill', '--signal', 'KILL', sender]);
     assert.equal(JSON.parse(await fixture(['recover-send'])).state, 'dispatching');
     await waitFor(
       async () => (await sql('SELECT state FROM whatsapp_attempts')) === 'unknown',
       70000,
+      'unknown-send recovery',
     );
     assert.equal(JSON.parse(await fixture(['recover-send'])).state, 'unknown');
     assert.equal(await count(), '1');

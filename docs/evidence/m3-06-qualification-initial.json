@@ -1,0 +1,48 @@
+{
+  "version": "qualification-v1",
+  "id": "94ce33baffa5",
+  "createdAt": "2026-10-30T01:49:27.162Z",
+  "imageId": "sha256:0e2c04392681be3052e38a6a9d74b9fb331c0cce0cd3f3edbde3d3fa79f4d99d",
+  "revision": "2d3eba8-m3-06-local",
+  "syntheticOnly": true,
+  "externalProviderCalls": 0,
+  "scenarios": [
+    {
+      "id": "signed_replay",
+      "passed": true,
+      "milliseconds": 625.6805999999997
+    },
+    {
+      "id": "database_outage",
+      "passed": true,
+      "milliseconds": 3984.0391
+    },
+    {
+      "id": "api_restart",
+      "passed": true,
+      "milliseconds": 1634.527900000001
+    },
+    {
+      "id": "monitor_recovery",
+      "passed": true,
+      "milliseconds": 5805.2624
+    },
+    {
+      "id": "transaction_crash",
+      "passed": true,
+      "milliseconds": 13237.0233
+    },
+    {
+      "id": "post_commit_crash",
+      "passed": true,
+      "milliseconds": 4926.389299999995
+    },
+    {
+      "id": "unknown_send_crash",
+      "passed": false,
+      "milliseconds": 623733.8552999999
+    }
+  ],
+  "profiles": [],
+  "cleanupPassed": true
+}

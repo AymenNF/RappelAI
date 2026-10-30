@@ -78,6 +78,6 @@ Review entries are operator attestations with supporting references, not cryptog
 
 ## CI and next work
 
-CI runs the physical restore and qualification exercises in an ephemeral Linux runner. It uploads only `report.json` files from those runs for 14 days, including failed-run reports; secret and diagnostic files are excluded by the exact paths. This change has not run remotely while M3-05 is uncommitted. See [GitHub's workflow artifact documentation](https://docs.github.com/en/actions/tutorials/store-and-share-data).
+CI runs the physical restore and qualification exercises in an ephemeral Linux runner. It uploads only `report.json` files from those runs for 14 days, including failed-run reports; secret and diagnostic files are excluded by the exact paths. M3-05 is committed and pushed as `2d3eba8`; no remote CI result is claimed here. See [GitHub's workflow artifact documentation](https://docs.github.com/en/actions/tutorials/store-and-share-data).
 
-After reviewing local results, address any failed performance gate and the pending hosted/provider checks. **M3-06 private beta stays gated** until all relevant evidence exists. A local pass is a useful rehearsal, not a substitute for hosted soak tests or real delivery verification.
+After reviewing local results, address any failed performance gate and the pending hosted/provider checks. **M3-06 private beta stays gated** until all relevant evidence exists. Its [preparation and daily review tools](private-beta.md) do not activate launch. A local pass is a useful rehearsal, not a substitute for hosted soak tests or real delivery verification.

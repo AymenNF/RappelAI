@@ -16,3 +16,4 @@ exports/
 .staging-local/
 .restore-drills/
 .qualification/
+.beta-private/

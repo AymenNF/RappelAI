@@ -1,0 +1,94 @@
+{
+  "version": "qualification-v1",
+  "id": "404321727164",
+  "createdAt": "2026-10-30T01:54:01.148Z",
+  "imageId": "sha256:0e2c04392681be3052e38a6a9d74b9fb331c0cce0cd3f3edbde3d3fa79f4d99d",
+  "revision": "2d3eba8-m3-06-local",
+  "syntheticOnly": true,
+  "externalProviderCalls": 0,
+  "scenarios": [
+    {
+      "id": "signed_replay",
+      "passed": true,
+      "milliseconds": 655.5397999999986
+    },
+    {
+      "id": "database_outage",
+      "passed": true,
+      "milliseconds": 3920.544099999999
+    },
+    {
+      "id": "api_restart",
+      "passed": true,
+      "milliseconds": 1647.0319000000018
+    },
+    {
+      "id": "monitor_recovery",
+      "passed": true,
+      "milliseconds": 6048.989199999998
+    },
+    {
+      "id": "transaction_crash",
+      "passed": true,
+      "milliseconds": 13776.293199999996
+    },
+    {
+      "id": "post_commit_crash",
+      "passed": true,
+      "milliseconds": 4858.209999999999
+    },
+    {
+      "id": "unknown_send_crash",
+      "passed": true,
+      "milliseconds": 46958.970400000006
+    },
+    {
+      "id": "load_drain",
+      "passed": true,
+      "milliseconds": 15239.6201
+    }
+  ],
+  "profiles": [
+    {
+      "name": "serial",
+      "concurrency": 1,
+      "requests": 60,
+      "successes": 60,
+      "statuses": {
+        "200": 60
+      },
+      "elapsedMs": 759.6208999999944,
+      "requestsPerSecond": 78.98676826822489,
+      "latencyMs": {
+        "p50": 12.06369999999879,
+        "p95": 16.532299999991665,
+        "p99": 21.432700000004843,
+        "max": 21.432700000004843
+      },
+      "persisted": 60,
+      "completed": 60,
+      "drainMs": 2766.385699999999
+    },
+    {
+      "name": "concurrent",
+      "concurrency": 8,
+      "requests": 240,
+      "successes": 240,
+      "statuses": {
+        "200": 240
+      },
+      "elapsedMs": 1297.6661000000022,
+      "requestsPerSecond": 184.94742214503376,
+      "latencyMs": {
+        "p50": 40.891499999997905,
+        "p95": 49.20759999999427,
+        "p99": 87.73120000000927,
+        "max": 102.4479999999894
+      },
+      "persisted": 240,
+      "completed": 240,
+      "drainMs": 9015.410900000003
+    }
+  ],
+  "cleanupPassed": true
+}

@@ -4,6 +4,8 @@ This combines local implementation and target production procedures. M3-03 imple
 
 ## Environments and release
 
+M3-06 provides [private beta preparation and daily reviews](private-beta.md). The draft proposes a review at 14:00 UTC of the previous complete UTC day; no scheduler is installed. Use the restricted monitor to write a new report, reconcile cost/delivery gaps, triage feedback and save a human signoff. The preparation checker retains all launch gates and adds responsibilities, cohort bounds and owner review. No participant has been invited or enrolled.
+
 Local development: Compose PostgreSQL, optional Redis and fixtures. Current staging: a separate Docker project on this computer, synthetic traffic only, localhost API and private database. Future hosted staging: independently provisioned dependencies and approved provider test recipients. Production: separate credentials, restricted network access, scoped runtime roles and durable off-site backups.
 
 Release order: checks → migration compatibility review → database backup verification → migration job → API/worker rollout → readiness and signed synthetic smoke check → observe delivery/backlog/cost. API and worker images use the same commit. Record model IDs, prompt hash, schema version and rate-card version alongside the deployment. Pin deployed container images by digest after qualification.
@@ -32,7 +34,7 @@ M1-05 provides `npm run usage:control -- status`, `pause`, `resume`, limit/rate 
 | DB storage / connections / lag       | Provider-specific headroom thresholds                            | Scale or correct retention/query behavior                       |
 | Restore verification                 | Before beta and at a regular operational cadence                 | Restore to isolated instance and exercise pending-work recovery |
 
-Targets are unmeasured until telemetry and traffic exist. Avoid high-cardinality labels containing phone numbers or raw messages. Trace by opaque IDs. Count API acceptance, delivery and read separately. Current digest entries are individual messages at a daily slot. The current monitor reports attempt counts and lateness, not an on-time-delivery SLO; a future cohort calculation must include missing deliveries and deduplicate retries. Use the ledger for cost.
+Targets are unmeasured until telemetry and traffic exist. Avoid high-cardinality labels containing phone numbers or raw messages. Trace by opaque IDs. Count API acceptance, delivery and read separately. Current digest entries are individual messages at a daily slot. The continuous monitor reports attempt counts and lateness. M3-06 daily reviews additionally count retained reminder promises once across retries and include missing materialization in the denominator. These observations can change after receipts, edits or deletion; they do not establish a production delivery SLO. Daily model settlement totals exclude WhatsApp/hosting invoices and flag incomplete historical coverage.
 
 ## Failure exercises
 

@@ -1,4 +1,5 @@
 import { privacyCommand, applyPrivacyCommand } from '../privacy/commands.js';
+import { feedbackCommand, recordFeedback } from '../beta/feedback.js';
 import { admitRequest } from '../quotas/service.js';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
@@ -79,6 +80,7 @@ export class IdentityProcessor {
     const list = listCommand(text);
     const preference = preferenceCommand(text);
     const privacy = privacyCommand(text);
+    const feedback = feedbackCommand(text);
     const admission =
       validTime && (!privacy || privacy.action === 'invalid')
         ? await admitRequest(client, event.id, user.id, text, event.payload)
@@ -116,7 +118,10 @@ export class IdentityProcessor {
       }
     }
     const s = transition.state;
-    if (preference && transition.disposition === 'ready') {
+    if (feedback && transition.disposition === 'ready') {
+      transition.reply = await recordFeedback(client, event.id, user.id, feedback.category);
+      transition.disposition = 'handled';
+    } else if (preference && transition.disposition === 'ready') {
       transition.reply = await applyPreferenceCommand(client, event.id, user.id, preference);
       transition.disposition = 'handled';
     } else if (list && transition.disposition === 'ready') {

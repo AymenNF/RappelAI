@@ -1,0 +1,64 @@
+{
+  "version": "beta-daily-review-v1",
+  "window": {
+    "day": "2026-10-29",
+    "start": "2026-10-29T00:00:00.000Z",
+    "end": "2026-10-30T00:00:00.000Z",
+    "timezone": "UTC",
+    "observedThrough": "2026-10-30T00:00:00.000Z"
+  },
+  "observedAt": "2026-10-30T01:49:45.155Z",
+  "completeDay": true,
+  "modelCosts": {
+    "settledMicros": "0",
+    "settledCalls": "0",
+    "trackingStartedAt": "2026-10-30T01:37:57.947Z",
+    "fullDayCoverage": false,
+    "currency": "USD",
+    "unit": "micros",
+    "basis": "settlement day, not request day",
+    "reviewThresholdMicros": "0",
+    "unresolvedCurrent": {
+      "count": 0,
+      "heldMicros": "0"
+    }
+  },
+  "currentMonthlyBudget": {
+    "enabled": false,
+    "capMicros": "0",
+    "spentMicros": "0",
+    "reservedMicros": "0"
+  },
+  "otherCosts": {
+    "whatsapp": "not_tracked",
+    "hosting": "not_tracked"
+  },
+  "delivery": {
+    "materialized": 0,
+    "suppressed": 0,
+    "eligible": 0,
+    "accepted": 0,
+    "confirmed": 0,
+    "onTime": 0,
+    "uncertain": 0,
+    "timingAnomalies": 0,
+    "unmaterialized": 0,
+    "onTimeEvidence": {
+      "numerator": 0,
+      "denominator": 0
+    },
+    "basis": "retained current promises; one intent across all retries; observed receipt time"
+  },
+  "feedback": {
+    "receivedInWindow": [],
+    "openCurrent": 0
+  },
+  "attention": ["cost_history_incomplete", "no_delivery_sample"],
+  "launchEnabled": false,
+  "limits": [
+    "Review does not change spending or launch settings.",
+    "Delivery/feedback history can change after late receipts, edits or account deletion; this is an observation, not a final SLO.",
+    "Provider acceptance is not delivery. Missing receipts are not proof of failure.",
+    "Model totals exclude WhatsApp, hosting and other provider invoices."
+  ]
+}
