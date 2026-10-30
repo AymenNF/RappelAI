@@ -75,7 +75,7 @@ M2-01 and M2-02 are implemented locally. Due reminders become durable outbound i
 
 ## M3 — private beta readiness (7–12 days)
 
-M3-01 is committed and pushed: quotas, abuse controls and truthful limit messages. M3-02 is implemented locally: account-scoped administrator exports, confirmed deletion, cancellation, unresolved-outcome holds, replay protection and bounded retention. See [privacy](privacy.md). Production export delivery, provider/backup cleanup and policy review remain activation work. M3-03 is implemented locally with content-free telemetry, administrator reconciliation queues and durable alert transitions; see [telemetry](telemetry.md). Next is **M3-04: staging deployment, secrets, backups/PITR and a restore drill**.
+M3-01 through M3-03 are committed and pushed: quotas, privacy controls and content-free telemetry/reconciliation alerts. M3-04 is implemented locally with Docker staging, scoped secrets, a restricted monitor, physical base backups/WAL, and a verified isolated restore with replay/deletion safeguards. See [staging](staging.md), [backup/restore](backup-restore.md), [privacy](privacy.md) and [telemetry](telemetry.md). Cloud hosting, off-site backup schedules/retention, external paging and production provider/policy configuration remain activation work. Next is **M3-05: process/network failure exercises, load tests and an evidence-based launch checklist**; do not treat passing local tests as a beta launch approval.
 
 - Enforce per-user/global rate and spend limits, with visible quota behavior for existing commitments.
 - Authenticated export and deletion; deletion cancels work, revokes tokens and purges derived data. Retention includes logs/traces/staging/backup lifecycle.

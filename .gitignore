@@ -13,3 +13,5 @@ Thumbs.db
 
 # Private account exports must never be committed.
 exports/
+.staging-local/
+.restore-drills/

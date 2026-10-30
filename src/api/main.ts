@@ -4,8 +4,10 @@ import { assertRuntimeRole, runtimeDatabaseUrl } from '../db/runtime.js';
 import { PostgresIngressStore } from '../db/ingress-store.js';
 import { buildApp } from './app.js';
 import { databaseSink, RuntimeTelemetry } from '../modules/telemetry/runtime.js';
+import { assertSecretScope } from '../config/secrets.js';
 
 const config = readConfig();
+assertSecretScope('api');
 const pool = createPool(runtimeDatabaseUrl('ingress'));
 await assertRuntimeRole(pool, 'ingress').catch(async (error: unknown) => {
   await pool.end();

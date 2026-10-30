@@ -1,0 +1,24 @@
+{
+  "version": "restore-drill-v1",
+  "id": "777283a5c9da",
+  "passed": true,
+  "imageId": "sha256:608efc2ea8f721d0191132a8a55da4e4f8b4c3bb56092b41eea100c7bf46a97b",
+  "restorePoint": "memorae_target_777283a5c9da",
+  "systemIdentifier": "7702181957917794342",
+  "restoreSeconds": 9.34,
+  "totalSeconds": 30.076,
+  "verification": {
+    "pointInTimeVerified": true,
+    "oldLeaseFenced": true,
+    "unknownOutcomesHeld": true,
+    "acceptedSendPreserved": true,
+    "deletionReapplied": true,
+    "pendingWorkRecoverable": true,
+    "spendingPaused": true,
+    "externalCalls": 0
+  },
+  "limits": [
+    "Local same-host exercise; no off-site backup or production RPO/RTO guarantee",
+    "Synthetic provider evidence only; no external sends"
+  ]
+}

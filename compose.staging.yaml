@@ -1,0 +1,151 @@
+name: memorae-staging
+x-app: &app
+  image: ${MEMORAE_IMAGE:-memorae-staging:local}
+  build:
+    context: .
+    args:
+      APP_REVISION: ${APP_REVISION:-unversioned}
+  restart: unless-stopped
+  init: true
+  read_only: true
+  tmpfs: ['/tmp:size=16m,mode=1777']
+  cap_drop: [ALL]
+  security_opt: ['no-new-privileges:true']
+  networks: [private]
+  stop_grace_period: 30s
+  logging:
+    driver: json-file
+    options: { max-size: '10m', max-file: '3' }
+x-mode: &mode
+  NODE_ENV: production
+  DEPLOYMENT_ENV: staging
+  STAGING_SYNTHETIC_ONLY: 'true'
+  MODEL_MODE: disabled
+services:
+  archive-init:
+    image: pgvector/pgvector:pg16
+    user: root
+    command: ['sh', '-c', 'chown postgres:postgres /wal-archive /basebackups']
+    volumes: ['wal_archive:/wal-archive', 'base_backups:/basebackups']
+    networks: [private]
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: memorae
+      POSTGRES_DB: memorae_staging
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password]
+    command:
+      [
+        'postgres',
+        '-c',
+        'wal_level=replica',
+        '-c',
+        'archive_mode=on',
+        '-c',
+        'archive_command=sh /opt/backup/archive-wal.sh %p %f',
+        '-c',
+        'archive_timeout=60s',
+      ]
+    volumes:
+      - staging_data:/var/lib/postgresql/data
+      - wal_archive:/wal-archive
+      - base_backups:/basebackups
+      - ./deploy/backup/archive-wal.sh:/opt/backup/archive-wal.sh:ro
+    networks: [private]
+    depends_on:
+      archive-init: { condition: service_completed_successfully }
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'memorae', '-d', 'memorae_staging']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  migrate:
+    <<: *app
+    restart: 'no'
+    profiles: [ops]
+    command: ['node', 'dist/ops/migrate.js']
+    environment:
+      <<: *mode
+      DATABASE_URL_FILE: /run/secrets/admin_database_url
+    secrets: [admin_database_url]
+  provision:
+    <<: *app
+    restart: 'no'
+    profiles: [ops]
+    command: ['node', 'dist/ops/provision-staging.js']
+    environment:
+      <<: *mode
+      DATABASE_URL_FILE: /run/secrets/admin_database_url
+      INGRESS_DATABASE_URL_FILE: /run/secrets/ingress_database_url
+      WORKER_DATABASE_URL_FILE: /run/secrets/worker_database_url
+      MONITOR_DATABASE_URL_FILE: /run/secrets/monitor_database_url
+    secrets: [admin_database_url, ingress_database_url, worker_database_url, monitor_database_url]
+  api:
+    <<: *app
+    networks: [private, ingress]
+    environment:
+      <<: *mode
+      INGRESS_DATABASE_URL_FILE: /run/secrets/ingress_database_url
+      WHATSAPP_APP_SECRET_FILE: /run/secrets/whatsapp_app_secret
+      WHATSAPP_VERIFY_TOKEN_FILE: /run/secrets/whatsapp_verify_token
+      WHATSAPP_PHONE_NUMBER_ID: staging-synthetic
+    secrets: [ingress_database_url, whatsapp_app_secret, whatsapp_verify_token]
+    ports: ['127.0.0.1:${STAGING_PORT:-33354}:3000']
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+  worker:
+    <<: *app
+    command: ['node', 'dist/worker/main.js']
+    environment:
+      <<: *mode
+      WORKER_DATABASE_URL_FILE: /run/secrets/worker_database_url
+    secrets: [worker_database_url]
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test: ['CMD', 'node', 'dist/ops/health.js', 'worker']
+      interval: 15s
+      timeout: 6s
+      retries: 5
+  monitor:
+    <<: *app
+    command: ['node', 'dist/ops/main.js', 'watch']
+    environment:
+      <<: *mode
+      MONITOR_DATABASE_URL_FILE: /run/secrets/monitor_database_url
+    secrets: [monitor_database_url]
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test: ['CMD', 'node', 'dist/ops/health.js', 'monitor']
+      interval: 15s
+      timeout: 6s
+      retries: 5
+secrets:
+  postgres_password: { file: ./.staging-local/postgres_password }
+  admin_database_url: { file: ./.staging-local/admin_database_url }
+  ingress_database_url: { file: ./.staging-local/ingress_database_url }
+  worker_database_url: { file: ./.staging-local/worker_database_url }
+  monitor_database_url: { file: ./.staging-local/monitor_database_url }
+  whatsapp_app_secret: { file: ./.staging-local/whatsapp_app_secret }
+  whatsapp_verify_token: { file: ./.staging-local/whatsapp_verify_token }
+networks:
+  private: { internal: true }
+  ingress: {}
+volumes:
+  staging_data:
+  wal_archive:
+  base_backups:

@@ -40,7 +40,7 @@ export class WorkQueue {
     const result = await this.pool.query(
       `WITH candidate AS (
       SELECT q.id FROM work_outbox q JOIN ingress_events e ON e.id=q.event_id
-      WHERE NOT EXISTS(SELECT 1 FROM users u WHERE u.business_phone_id=e.phone_number_id AND u.sender_id=e.sender_id AND u.deletion_requested_at IS NOT NULL)
+      WHERE NOT recovery_blocked() AND NOT EXISTS(SELECT 1 FROM users u WHERE u.business_phone_id=e.phone_number_id AND u.sender_id=e.sender_id AND u.deletion_requested_at IS NOT NULL)
         AND q.stage=$1 AND q.status='pending' AND q.available_at<=clock_timestamp() AND q.attempts<q.max_attempts
         AND NOT EXISTS (
           SELECT 1 FROM work_outbox prev JOIN ingress_events pe ON pe.id=prev.event_id
@@ -96,6 +96,8 @@ export class WorkQueue {
       await client.query(
         "SELECT pg_advisory_xact_lock_shared(hashtextextended(current_schema()||':privacy',0))",
       );
+      if ((await client.query('SELECT recovery_blocked() AS blocked')).rows[0].blocked)
+        throw new LeaseLostError();
       const held = await client.query(
         `SELECT id FROM work_outbox WHERE id=$1 AND lease_token=$2
         AND status='leased' AND lease_until>clock_timestamp() FOR UPDATE`,

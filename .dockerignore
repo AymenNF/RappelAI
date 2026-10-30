@@ -6,3 +6,6 @@ dist
 .env.*
 coverage
 evals/results
+.staging-local
+.restore-drills
+exports

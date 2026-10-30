@@ -45,7 +45,9 @@ export class TestReplySender {
       );
       // Match the usage service lock order: policy before user. Pause fences later authorizations.
       const policy = (
-        await client.query('SELECT enabled FROM usage_policy WHERE singleton FOR SHARE')
+        await client.query(
+          'SELECT enabled AND NOT recovery_blocked() AS enabled FROM usage_policy WHERE singleton FOR SHARE',
+        )
       ).rows[0];
       if (!policy?.enabled) throw new SendBlockedError('Global sending pause');
       const user = (

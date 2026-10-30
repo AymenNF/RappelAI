@@ -1,6 +1,5 @@
 import type { Pool, PoolClient } from 'pg';
 import { z } from 'zod';
-import { assertUsageOperator } from '../usage/control.js';
 import { activeRules, rules, type AlertKey } from './rules.js';
 import { collectSnapshot } from './snapshot.js';
 
@@ -30,7 +29,13 @@ export class OperationsControl {
     let discard = false;
     try {
       await c.query('BEGIN');
-      await assertUsageOperator(c);
+      const access = (
+        await c.query(
+          "SELECT pg_has_role(current_user,'memorae_monitor','MEMBER') OR pg_has_role(current_user,relowner,'MEMBER') AS allowed FROM pg_class WHERE oid='usage_policy'::regclass",
+        )
+      ).rows[0];
+      if (!access?.allowed)
+        throw new Error('Operations controls require monitor or administrator access');
       // This aggregate statement has many small subqueries; avoid per-poll JIT compilation.
       await c.query('SET LOCAL jit=off');
       await c.query(

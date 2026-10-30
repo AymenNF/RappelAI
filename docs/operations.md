@@ -1,10 +1,10 @@
 # Operations, launch gates and cost planning
 
-This combines the local implementation and target production runbook. M3-03 now implements fixed runtime telemetry, administrator diagnostics and durable alerts through `ops:control check|watch|status`; see [telemetry](telemetry.md) for thresholds, access, retention and commands. No production deployment, external paging destination, backups or live provider activation is configured.
+This combines local implementation and target production procedures. M3-03 implements telemetry, diagnostics and durable alerts; see [telemetry](telemetry.md). M3-04 runs a separate local Docker staging project with scoped secrets, a restricted monitor, verified base backups/WAL and a real restore drill. Follow [staging](staging.md) and [backup/restore](backup-restore.md). Production hosting, encrypted off-site storage, backup scheduling, external paging and live provider activation remain pending.
 
 ## Environments and release
 
-Local: Compose PostgreSQL, optional Redis, fixtures, no real users. Staging: isolated managed dependencies and provider test recipients. Production: separate credentials, restricted network access, scoped runtime roles and durable backups.
+Local development: Compose PostgreSQL, optional Redis and fixtures. Current staging: a separate Docker project on this computer, synthetic traffic only, localhost API and private database. Future hosted staging: independently provisioned dependencies and approved provider test recipients. Production: separate credentials, restricted network access, scoped runtime roles and durable off-site backups.
 
 Release order: checks → migration compatibility review → database backup verification → migration job → API/worker rollout → readiness and signed synthetic smoke check → observe delivery/backlog/cost. API and worker images use the same commit. Record model IDs, prompt hash, schema version and rate-card version alongside the deployment. Pin deployed container images by digest after qualification.
 
@@ -12,7 +12,7 @@ Rollback: stop new spending if needed; roll back compatible application image; p
 
 ## Local work recovery
 
-M1-03 now recovers expired leases on each worker cycle, caps retries and preserves per-user order. Inspect dead work, repair its cause and use `npm run work:retry -- <dead-work-uuid> <operator-label>`. See the [work processing runbook](work-processing.md) for the full contract and known limits. External-send reconciliation is implemented; M3-03 adds local detection and durable alert state. External paging and deployment supervision remain to be configured.
+M1-03 recovers expired leases on each worker cycle, caps retries and preserves per-user order. Inspect dead work, repair its cause and use `npm run work:retry -- <dead-work-uuid> <operator-label>`. See the [work processing runbook](work-processing.md). M3-03 adds detection and durable alert state; M3-04 supplies local Docker restart policies and health checks. External paging and host/backup supervision remain to be configured.
 
 ## Spending controls
 

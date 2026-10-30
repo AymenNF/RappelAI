@@ -84,7 +84,7 @@ export class UsageService {
     const result = await client.query(
       `SELECT q.id FROM work_outbox q
       JOIN identity_results r ON r.event_id=q.event_id JOIN users u ON u.id=r.user_id
-      WHERE q.id=$1 AND q.event_id=$2 AND q.lease_token=$3 AND q.status='leased' AND q.stage='action'
+      WHERE NOT recovery_blocked() AND q.id=$1 AND q.event_id=$2 AND q.lease_token=$3 AND q.status='leased' AND q.stage='action'
         AND q.lease_until>clock_timestamp() AND r.user_id=$4 AND r.disposition='ready'
         AND r.consent_grant_at=u.consent_at AND r.timezone_confirmed_at=u.timezone_confirmed_at
         AND u.deletion_requested_at IS NULL AND u.consent_version=$5 AND NOT u.paused AND u.pending_timezone IS NULL AND u.timezone IS NOT NULL

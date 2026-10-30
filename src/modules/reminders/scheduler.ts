@@ -24,6 +24,10 @@ export class ReminderScheduler {
       await client.query(
         "SELECT pg_advisory_xact_lock_shared(hashtextextended(current_schema()||':privacy',0))",
       );
+      if ((await client.query('SELECT recovery_blocked() AS blocked')).rows[0].blocked) {
+        await client.query('COMMIT');
+        return result;
+      }
       // Keep microseconds in PostgreSQL. One fixed database cutoff per sweep, never the host clock.
       const cutoff = (await client.query('SELECT clock_timestamp()::text AS cutoff')).rows[0]
         .cutoff;

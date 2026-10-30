@@ -12,7 +12,7 @@ For example, a send times out and stays `unknown`. After five minutes, the monit
 
 ## Run locally
 
-Apply migration `0019_telemetry.sql` and rebuild/restart API and worker. Use the migration-administrator `DATABASE_URL` for these commands:
+Apply all migrations and rebuild/restart API and worker. Local commands can use the migration-administrator `DATABASE_URL`; M3-04 staging uses a dedicated `MONITOR_DATABASE_URL_FILE` with the restricted `memorae_monitor` capability. See [staging commands](staging.md). The CLI prefers the monitor URL when present:
 
 ```powershell
 npm run ops:control -- check
@@ -61,7 +61,7 @@ Future backoff is excluded from runnable-work alerts. Intentional disabled plann
 
 ## Privacy, access and retention
 
-Only the migration administrator can read the monitor, acknowledge alerts, change expectations, or inspect diagnostic queues. The restricted ingress and worker logins can call a narrowly scoped definer function for their own component only. The function validates a fixed numeric counter vocabulary and fixes its search path with temporary objects last. Runtime roles cannot read/write the underlying monitoring tables directly; tenants have no operational access. No public metrics or diagnostics HTTP endpoint is added.
+The migration administrator or M3-04's dedicated monitor login can inspect monitoring, acknowledge alerts, change expectations and read diagnostic queues. The monitor has column-limited lifecycle reads and monitoring-only writes, without business content, provider secrets, spending changes or erasure privileges. The ingress and worker logins can call a narrowly scoped definer function for their own telemetry component only. The function validates a fixed numeric counter vocabulary and fixes its search path with temporary objects last. Ingress/worker roles cannot access monitoring tables directly; tenants have no operational access. No public diagnostics HTTP endpoint is added.
 
 Ordinary telemetry contains no bodies, addresses, provider message IDs, user IDs, tokens, request URLs, arbitrary labels or raw error text. HTTP logging uses generated request IDs, safe serializers, fixed framework error responses and a fixed not-found response, including malformed/unsupported-content requests. Operator diagnostics contain only opaque IDs, lifecycle states and timestamps/ages. These IDs still warrant restricted handling.
 
@@ -71,4 +71,4 @@ Each successful check prunes at most 1,000 expired rows per category: counter bu
 
 Tests inject webhook/worker failures, stop and revive heartbeats, age queues and provider holds, create unknown/rejected/conflicting sends, distinguish acceptance from delivery, age deletion/receipt work, reconcile held usage, exercise concurrent checks and stale acknowledgements, roll back a failed observation, verify numeric batch deduplication, test fixed-path function isolation and runtime/tenant denial, inspect log privacy, page microsecond ties, and prune history without deleting business data. Transports remain synthetic.
 
-Next: **M3-04 — staging deployment, scoped secrets, backup/PITR and a restore drill**, including independent supervision of API, worker and monitor and an explicitly configured external alert destination.
+M3-04 now runs the API, worker and monitor as separate local containers and verifies backup/PITR recovery. Next is **M3-05 — failure/load tests and launch gates**. An external alert destination and independent host, storage, archive-lag and monitor supervision still need hosted configuration.

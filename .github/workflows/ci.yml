@@ -33,3 +33,15 @@ jobs:
       - run: npm run db:migrate
       - run: npm run db:migrate
       - run: npm run test:integration
+  restore-drill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: docker build --build-arg APP_REVISION=${{ github.sha }} -t memorae-staging:local .
+      - run: npm run restore:drill

@@ -1,6 +1,7 @@
 import { setTimeout } from 'node:timers/promises';
 import { randomUUID } from 'node:crypto';
-import { readConfig } from '../config/env.js';
+import { readWorkerConfig } from '../config/env.js';
+import { assertSecretScope } from '../config/secrets.js';
 import { createPool } from '../db/pool.js';
 import { assertRuntimeRole, runtimeDatabaseUrl } from '../db/runtime.js';
 import { IdentityProcessor } from '../modules/identity/store.js';
@@ -17,9 +18,8 @@ import { DeliveryRecovery } from '../modules/whatsapp/recovery.js';
 import { databaseSink, RuntimeTelemetry } from '../modules/telemetry/runtime.js';
 
 // Local onboarding, optional offline planning and transactional execution; no provider sends.
-const config = readConfig();
-if (config.NODE_ENV === 'production')
-  throw new Error('Local onboarding notice must be replaced before production use');
+const config = readWorkerConfig();
+assertSecretScope('worker');
 const pool = createPool(runtimeDatabaseUrl('worker'));
 await assertRuntimeRole(pool, 'worker').catch(async (error: unknown) => {
   await pool.end();

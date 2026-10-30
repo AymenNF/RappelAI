@@ -1,5 +1,7 @@
 # Architecture and system design
 
+M3-04 deploys the compiled API, worker and independent monitor in a separate local Docker project. Per-service secret mounts and database capabilities separate ingress, processing, observation and schema administration. PostgreSQL archives WAL beside verified physical base backups. Restored targets start blocked with a fresh instance identifier, reapply deletion evidence, invalidate old leases and require reconciliation before an audited release; spending stays paused. See [staging](staging.md) and [restore safety](backup-restore.md).
+
 M3-03 records fixed numeric runtime batches and heartbeats without message content. An independent administrator monitor snapshots operational aggregates, persists idempotent alert transitions, and exposes bounded reconciliation queues. Acknowledgement never changes provider/business state. See [telemetry](telemetry.md).
 
 M3-02 uses confirmed account deletion to stop new activity, with administrator erasure held until external outcomes are resolved. Shared runtime/exclusive maintenance locks serialize erasure against ingress and result persistence. A keyed address fingerprint prevents replay from recreating the account. Exports are account-scoped local JSON; retention has a bounded dry-run/apply CLI. See [privacy](privacy.md).

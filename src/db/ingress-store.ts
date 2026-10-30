@@ -24,7 +24,7 @@ export class PostgresIngressStore implements IngressStore {
     try {
       await this.pool.query('SELECT event_key FROM ingress_events LIMIT 0');
       await this.pool.query('SELECT event_id FROM work_outbox LIMIT 0');
-      return true;
+      return !(await this.pool.query('SELECT recovery_blocked() AS blocked')).rows[0].blocked;
     } catch {
       return false;
     }
@@ -39,6 +39,8 @@ export class PostgresIngressStore implements IngressStore {
       await client.query(
         "SELECT pg_advisory_xact_lock_shared(hashtextextended(current_schema()||':privacy',0))",
       );
+      if ((await client.query('SELECT recovery_blocked() AS blocked')).rows[0].blocked)
+        throw new Error('Restored database is quarantined');
       const filtered = await client.query(
         `SELECT x.ordinal FROM jsonb_to_recordset($1::jsonb) AS x(ordinal integer,phone text,sender text)
         WHERE NOT privacy_address_blocked(x.phone,x.sender)`,

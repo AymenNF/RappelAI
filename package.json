@@ -35,7 +35,12 @@
     "eval": "tsx evals/score.ts",
     "quota:control": "tsx scripts/quota-control.ts",
     "privacy:control": "tsx scripts/privacy-control.ts",
-    "ops:control": "tsx scripts/ops-control.ts"
+    "ops:control": "tsx scripts/ops-control.ts",
+    "staging:setup": "tsx scripts/staging-setup.ts",
+    "staging:smoke": "tsx scripts/staging-smoke.ts",
+    "staging:backup": "tsx scripts/staging-backup.ts",
+    "restore:control": "tsx scripts/recovery-control.ts",
+    "restore:drill": "tsx scripts/restore-drill.ts"
   },
   "dependencies": {
     "@js-temporal/polyfill": "0.5.1",

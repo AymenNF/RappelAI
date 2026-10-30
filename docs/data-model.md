@@ -4,6 +4,8 @@ The executable schema includes `schema_migrations`, `ingress_events`, `work_outb
 
 ## Current schema
 
+Migrations 0020/0021 add `memorae_monitor` with column-limited operational reads and monitoring writes, `recovery_policy`, `recovery_audit`, the recovery gate and scoped worker health function. The singleton recovery policy stores quarantine state, session, deletion-overlay capture time, target instance and release time. Each physical restore uses a fresh server instance UUID so an old release copied in a backup cannot authorize another recovery. Runtime roles cannot modify policy/audit or the spending guard; administrators perform an atomic quarantine/release through the recovery service. See [backup and restore](backup-restore.md).
+
 Migration 0019 adds administrator-only telemetry counters, runtime heartbeats, batch deduplication, monitoring expectations, one current snapshot, fixed alert states and transition history. Runtime roles can only record their own component through a validated function. No account/content fields are added to monitoring storage. See [telemetry](telemetry.md).
 
 Migration 0018 adds `privacy_requests`, `privacy_actions`, the account deletion marker, ingress redaction timestamps, private replay fingerprints/key, retention policy and aggregate privacy-operation records. Ownership foreign keys support atomic administrator erasure without granting runtime DELETE access. See [privacy](privacy.md).

@@ -6,6 +6,8 @@ A WhatsApp-first personal assistant for reminders, lists, and eventually durable
 
 ## Start here
 
+M3-04 adds a running local Docker staging environment, scoped file-mounted secrets, a restricted monitor login, verified physical backups and an isolated PITR restore drill. Read the [staging guide](docs/staging.md) and [backup/restore runbook](docs/backup-restore.md). Production and live provider activation remain pending.
+
 M3-03 adds content-free runtime telemetry, administrator reconciliation queues, durable alert lifecycles and an independent monitor command. See the [telemetry runbook](docs/telemetry.md).
 
 M3-02 adds account-scoped JSON export requests, confirmed deletion with pending-work cancellation, replay protection and bounded retention maintenance. See the [privacy guide](docs/privacy.md).
@@ -51,6 +53,7 @@ In another terminal: `npm run dev:worker`. Check `http://localhost:3000/health/r
 src/
   api/                 Fastify app and API process
   worker/              Leased onboarding consumer and recovery
+  ops/                 Compiled migration, monitoring and recovery commands
   modules/
     whatsapp/          Signed ingress, send adapter and receipt reconciliation
     processing/        Work leases, model adapter and persisted plans
@@ -61,10 +64,12 @@ src/
     calendar/          Reserved design boundary
     identity/          Local consent, timezone and tenant profiles
     usage/             Spending reservations, limits and kill switch
+    recovery/          Restore quarantine, deletion overlay and reviewed release
   contracts/           Validated model decisions for the first slice
   config/              Environment validation
   db/                  PostgreSQL access and durable ingress
 migrations/            Immutable, ordered SQL migrations
+deploy/                WAL archiving support for isolated staging
 scripts/               Local setup and checksum-aware migration runner
 tests/                 Unit and real PostgreSQL integration tests
 prompts/               Versioned draft prompts
