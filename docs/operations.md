@@ -36,6 +36,8 @@ Targets are unmeasured until telemetry and traffic exist. Avoid high-cardinality
 
 ## Failure exercises
 
+M3-05 automates eight local scenarios through `npm run qualify:run`, including real process kills before/after transaction commit, a database outage, and a sender killed after synthetic provider acceptance. It also verifies signed load and complete backlog drain. See the [qualification guide](qualification.md) for the executable scope and [recorded evidence](evidence/m3-05-qualification.json). Scenarios for future Redis/calendar integrations below remain targets, not completed exercises.
+
 | Inject                                         | Expected behavior                                          |
 | ---------------------------------------------- | ---------------------------------------------------------- |
 | Replay a webhook / eight concurrent duplicates | One inbox event and one work intent                        |
@@ -71,6 +73,8 @@ gross margin = (net revenue - attributable costs) / net revenue
 Account for provider/BSP fees and taxes separately; do not allocate a free allowance as if every user receives it independently. Compare low/expected/heavy use and provider-rate increases. Track attempted versus delivered sends and reserved versus settled costs. Set account limits and application limits; preserve and report existing commitments if new spend is paused. Choose actual caps only after measuring pilot usage.
 
 ## Pre-beta launch checklist
+
+Use `npm run launch:check -- <qualification-report> <expected-image-id> --require-ready` as the executable gate. It combines fresh matching-image local evidence with all reviews in `ops/launch-reviews.json`; missing evidence blocks readiness. Current local success does not satisfy hosted/provider/privacy/rollout approvals. The detailed checklist below remains the project owner's launch review, not an automatic approval.
 
 - [ ] Current platform eligibility, sending limits and template approval verified for the actual account.
 - [ ] Real model evals recorded; scope-appropriate accuracy and injection gates pass.

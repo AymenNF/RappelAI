@@ -1,5 +1,7 @@
 # Architecture and system design
 
+M3-05 adds a separate qualification runner that provisions disposable Docker resources and exercises the compiled services with real database outages and process kills. A private fake provider tests acceptance with a lost response. Versioned reports separate functional integrity, latency/drain targets and manual launch reviews bound to the candidate image. Fault hooks are confined to guarded fixture commands; the application API exposes none. See [qualification](qualification.md).
+
 M3-04 deploys the compiled API, worker and independent monitor in a separate local Docker project. Per-service secret mounts and database capabilities separate ingress, processing, observation and schema administration. PostgreSQL archives WAL beside verified physical base backups. Restored targets start blocked with a fresh instance identifier, reapply deletion evidence, invalidate old leases and require reconciliation before an audited release; spending stays paused. See [staging](staging.md) and [restore safety](backup-restore.md).
 
 M3-03 records fixed numeric runtime batches and heartbeats without message content. An independent administrator monitor snapshots operational aggregates, persists idempotent alert transitions, and exposes bounded reconciliation queues. Acknowledgement never changes provider/business state. See [telemetry](telemetry.md).

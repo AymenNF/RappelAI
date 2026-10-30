@@ -45,3 +45,14 @@ jobs:
       - run: npm ci
       - run: docker build --build-arg APP_REVISION=${{ github.sha }} -t memorae-staging:local .
       - run: npm run restore:drill
+      - run: npm run qualify:run
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: synthetic-operational-evidence
+          include-hidden-files: true
+          path: |
+            .restore-drills/*/report.json
+            .qualification/*/report.json
+          if-no-files-found: warn
+          retention-days: 14

@@ -7,4 +7,5 @@ package-lock.json
 evals/results
 .staging-local
 .restore-drills
+.qualification
 exports

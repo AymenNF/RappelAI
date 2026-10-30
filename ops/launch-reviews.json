@@ -1,0 +1,69 @@
+{
+  "version": "launch-reviews-v1",
+  "reviews": [
+    {
+      "id": "regression_suite",
+      "status": "verified",
+      "owner": "Codex local verification",
+      "evidence": "docs/verification.md: M3-05; npm run check (93 unit tests, 60 eval cases, build/types/format); npm run test:integration (221 tests/subtests)",
+      "reviewedAt": "2026-10-30T01:17:51.247Z",
+      "imageId": "sha256:064088796b52d19b3fdc2e0cb025a37336e613b380dd163f3ba671cb806c52bc"
+    },
+    {
+      "id": "live_model_evaluation",
+      "status": "pending",
+      "owner": "",
+      "evidence": "",
+      "reviewedAt": null,
+      "imageId": null
+    },
+    {
+      "id": "provider_templates_delivery",
+      "status": "pending",
+      "owner": "",
+      "evidence": "",
+      "reviewedAt": null,
+      "imageId": null
+    },
+    {
+      "id": "production_privacy",
+      "status": "pending",
+      "owner": "",
+      "evidence": "",
+      "reviewedAt": null,
+      "imageId": null
+    },
+    {
+      "id": "hosted_security",
+      "status": "pending",
+      "owner": "",
+      "evidence": "",
+      "reviewedAt": null,
+      "imageId": null
+    },
+    {
+      "id": "offsite_restore",
+      "status": "pending",
+      "owner": "",
+      "evidence": "",
+      "reviewedAt": null,
+      "imageId": null
+    },
+    {
+      "id": "paging_and_ownership",
+      "status": "pending",
+      "owner": "",
+      "evidence": "",
+      "reviewedAt": null,
+      "imageId": null
+    },
+    {
+      "id": "beta_rollout",
+      "status": "pending",
+      "owner": "",
+      "evidence": "",
+      "reviewedAt": null,
+      "imageId": null
+    }
+  ]
+}

@@ -76,7 +76,7 @@ npm run staging:backup
 npm run restore:drill
 ```
 
-For a new application release: run checks and the integration suite, record the source revision and image ID, verify a backup, stop API/worker/monitor, build the new image, run the migration job once, rerun it to verify it is a no-op, provision roles if needed, and start the three services with `--wait`. Then run the signed smoke and inspect monitoring. Migrations include checksums and an advisory lock; never edit an applied migration. Correct it with a new numbered file. M3-04's local image includes uncommitted changes and is labelled `9ad6acf-m3-04-local`, not an immutable release commit.
+For a new application release: run checks and the integration suite, record the source revision and image ID, verify a backup, stop API/worker/monitor, build the new image, run the migration job once, rerun it to verify it is a no-op, provision roles if needed, and start the three services with `--wait`. Then run the signed smoke and inspect monitoring. Migrations include checksums and an advisory lock; never edit an applied migration. Correct it with a new numbered file. The original M3-04 local image was built before commit `b63d913` and retains its `9ad6acf-m3-04-local` label. Use the recorded image digest when comparing evidence.
 
 Rollback requires a compatible previous image or a forward corrective migration. Data recovery uses a **separate** database and the [restore procedure](backup-restore.md); do not overwrite the working staging volume. Never replay all outbound work after a rollback.
 
@@ -92,4 +92,4 @@ Resume with `up -d --wait api worker monitor`. Avoid `down -v`: it removes the n
 
 Still needed: choose hosting and region, use separately scoped hosted secrets, configure TLS and network policy, pin qualified image digests, schedule encrypted off-site base backups and WAL copies, define/test retention and recovery targets, and configure independent host/backup/monitor alerts. Current monitoring detects application failures, but no external paging destination is installed. No hosting account or paid service was created.
 
-Next implementation milestone: **M3-05**, controlled process/network failure exercises, load evidence, and the launch-gate checklist. Live provider credentials, template approval, production consent and real-model evaluation remain separate prerequisites.
+M3-05 now supplies [controlled failure exercises, load evidence and launch checks](qualification.md) in a separate disposable environment. Live provider credentials, template approval, production consent and real-model evaluation remain separate prerequisites before M3-06 private beta.

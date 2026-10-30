@@ -8,4 +8,5 @@ coverage
 evals/results
 .staging-local
 .restore-drills
+.qualification
 exports

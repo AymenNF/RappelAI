@@ -6,6 +6,8 @@ A WhatsApp-first personal assistant for reminders, lists, and eventually durable
 
 ## Start here
 
+M3-05 adds repeatable process/database failure exercises, bounded load measurements and a launch-readiness checker. The local qualification run passed; hosted/provider launch gates remain pending. Read [qualification and readiness](docs/qualification.md).
+
 M3-04 adds a running local Docker staging environment, scoped file-mounted secrets, a restricted monitor login, verified physical backups and an isolated PITR restore drill. Read the [staging guide](docs/staging.md) and [backup/restore runbook](docs/backup-restore.md). Production and live provider activation remain pending.
 
 M3-03 adds content-free runtime telemetry, administrator reconciliation queues, durable alert lifecycles and an independent monitor command. See the [telemetry runbook](docs/telemetry.md).

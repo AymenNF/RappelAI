@@ -42,7 +42,7 @@ The runner creates uniquely labelled disposable source/target containers, a priv
 7. Applies quarantine, fences old leases, preserves accepted sends, holds unknown outcomes, settles synthetic usage, abandons the synthetic unknown send without retrying, and reapplies/purges the later account deletion.
 8. Explicitly releases the reviewed restore, verifies pending work can be claimed and spending remains paused, then removes only the drill's labelled containers/network/volumes.
 
-The ignored `.restore-drills/<id>/report.json` records the exact application image ID, source system identifier, selected point, timing and assertions. Private files in that folder include synthetic credentials and deletion evidence: never commit the whole folder. The sanitized successful [M3-04 report](evidence/m3-04-restore.json) is checked into the working tree. A CI job repeats this drill; remote CI has not run for the uncommitted M3-04 work.
+The ignored `.restore-drills/<id>/report.json` records the exact application image ID, source system identifier, selected point, timing and assertions. Private files in that folder include synthetic credentials and deletion evidence: never commit the whole folder. The sanitized successful [M3-04 report](evidence/m3-04-restore.json) is checked into the working tree. A CI job repeats this drill; this document records local results and does not assert a remote CI outcome.
 
 The report's elapsed time is one tiny local sample. It is not a production recovery objective or load measurement. No external calls are made and provider reconciliation evidence is synthetic.
 
